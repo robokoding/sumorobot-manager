@@ -1,5 +1,10 @@
 # sumorobot-wifi-manager
 
+## How to install
+
+1. Install nodejs and npm
+2. From terminal run npm install; npm start
+
 ## How to use
 
 1. Select serial port
