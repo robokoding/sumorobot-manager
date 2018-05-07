@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>SumoManager</title>
+    <link rel="stylesheet" href="resources/styles.css">
+  </head>
+  <body>
+    <img src="resources/icon.png" alt="logo" class="center">
+
+    <div class="messages">
+        <div id="info" class="info"></div>
+        <div id="error" class="error"></div>
+    </div>
+
+    <span>1. Select SumoRobot serial port</span>
+    <br>
+    <span>2. Enter WiFi credentials</span>
+    <br>
+    <span>3. Press add WiFi network</span>
+    <br>
+    <br>
+
+    <div class="center">
+        <select id="serialPortSelector"></select>
+        <br>
+        <input type="text" placeholder="SSID" value="" id="ssid">
+        <input type="password" placeholder="password" value="" id="password">
+        <br>
+        <button type="button" id="addWifiButton">Add wifi network</button>
+    </div>
+
+    <script>
+      // You can also require other files to run in this process
+      require('./renderer.js')
+    </script>
+  </body>
+</html>
