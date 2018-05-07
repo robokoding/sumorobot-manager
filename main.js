@@ -16,7 +16,7 @@ function createWindow () {
   // Create the browser window.
   //mainWindow = new BrowserWindow({width: 1020, height: 560})
   //mainWindow = new BrowserWindow({width: 320, height: 285})
-  mainWindow = new BrowserWindow({width: width / 3, height: 500})
+  mainWindow = new BrowserWindow({width: width / 3, height: 575})
 
   // and load the index.html of the app.
   mainWindow.loadURL(url.format({
