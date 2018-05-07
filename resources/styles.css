@@ -71,6 +71,9 @@ input:focus, select:focus {
 select {
     width: 100%;
 }
+select option {
+    background-color: #2a2f4a;
+}
 div.center {
     width: 100%;
 }
