@@ -1,14 +1,13 @@
 # sumorobot-wifi-manager
 
-## How to install
+## How to run
 
-1. Install nodejs and npm
-2. From terminal run npm install; npm start
+1. ./main.py
 
 ## How to use
 
 1. Select serial port
-2. Add WiFi network details
+2. Add WiFi credentials
 3. Press add WiFi network
 
 ## License
@@ -17,5 +16,5 @@
 
 ## Credits
 
-node.js
-Electron
+Qt
+Python
