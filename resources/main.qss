@@ -1,0 +1,35 @@
+QWidget {
+    color: white;
+    background-color: #242943;
+}
+
+QPixmap {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+QPushButton {
+    height: 2em;
+    border: 2px solid white;
+    background: transparent;
+}
+
+QPushButton:hover {
+    color: #ffd500;
+    border: 2px solid #ffd500;
+}
+
+QLineEdit, QComboBox {
+    width: 20em;
+    height: 2em;
+    border: none;
+    background: rgba(212,212,255,0.035);
+}
+
+QLineEdit:focus, QComboBox:focus {
+    border: 2px solid #ffd500;
+}
+
+QComboBox::drop-down {
+    image: url(dropdown.png);
+}
