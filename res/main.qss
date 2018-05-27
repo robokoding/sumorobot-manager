@@ -3,6 +3,12 @@ QWidget {
     background-color: #242943;
 }
 
+QLabel {
+    color: white;
+    font-size: 1.5em;
+    font-family: Orbitron;
+}
+
 QPixmap {
     margin-left: auto;
     margin-right: auto;
@@ -10,6 +16,8 @@ QPixmap {
 
 QPushButton {
     height: 2em;
+    font-size: 1.5em;
+    font-family: Orbitron;
     border: 2px solid white;
     background: transparent;
 }
@@ -23,6 +31,8 @@ QLineEdit, QComboBox {
     width: 20em;
     height: 2em;
     border: none;
+    font-size: 1.5em;
+    font-family: Orbitron;
     background: rgba(212,212,255,0.035);
 }
 
