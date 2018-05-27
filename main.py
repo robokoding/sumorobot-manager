@@ -27,6 +27,9 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
+# version
+VERSION = " v0.3"
+
 # define the resource path
 RESOURCE_PATH = 'res'
 if hasattr(sys, '_MEIPASS'):
@@ -52,6 +55,7 @@ class SumoManager(QWidget):
         serialLabel = QLabel('1. Select serial port')
         # update serial ports every X seconds
         self.serialBox = QComboBox()
+        # make serialBox readonly
 
         # WiFi credentials fields
         wifiLabel = QLabel('2. Enter WiFi credentials')
@@ -81,7 +85,7 @@ class SumoManager(QWidget):
         # main window style, layout and position
         with open(os.path.join(RESOURCE_PATH, 'main.qss'), 'r') as file:
             self.setStyleSheet(file.read())
-        self.setWindowTitle('SumoManager')
+        self.setWindowTitle('SumoManager' + VERSION)
         self.setLayout(vbox)
         self.show()
         self.center()
@@ -138,11 +142,11 @@ class SumoManager(QWidget):
             # write the updates config file
             board.put('config.json', config)
             self.showMessage('info', 'WiFi credentials successfully added')
+
         _thread.start_new_thread(updateConfig, ())
 
     # when mouse clicked clear the focus on the input fields
     def mousePressEvent(self, event):
-        focused_widget = QApplication.focusWidget()
         self.wifiNameEdit.clearFocus()
         self.wifiPwdEdit.clearFocus()
         self.serialBox.clearFocus()
@@ -152,24 +156,40 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = SumoManager()
 
-    serialPorts = []
-    removeWarning = False
+    serial_len = 0
+    remove_warning = False
     def updateSerialBox():
-        global serialPorts
-        global removeWarning
-        # clear the serial ports
-        ex.serialBox.clear()
-        # scan the serial ports and add them to the combobox
+        global serial_len
+        global remove_warning
+
+        serial_ports = []
+        # scan the serial ports with specific vendor ID
         for port in serial.tools.list_ports.comports():
-            ex.serialBox.addItem(port.device)
+            if '1A86:' in port.hwid:
+                serial_ports.append(port.device)
+
         # when there are no serial ports connected
-        if len(serial.tools.list_ports.comports()) == 0:
+        if len(serial_ports) == 0:
             ex.showMessage('warning', 'Please connect your SumoRobot')
-            removeWarning = True
-        elif removeWarning:
+            remove_warning = True
+        elif remove_warning:
             ex.serialBox.setStyleSheet('background: rgba(212,212,255,0.035);')
             ex.showMessage('warning', '')
-            removeWarning = False
+            remove_warning = False
+
+        # only update if ports changed
+        if serial_len == len(serial_ports):
+            return
+
+        # update serial ports length
+        serial_len = len(serial_ports)
+
+        # clear the serial ports
+        ex.serialBox.clear()
+
+        # list all serial ports
+        for port in serial_ports:
+            ex.serialBox.addItem(port)
 
     # update serial ports every X second
     timer = QTimer()
