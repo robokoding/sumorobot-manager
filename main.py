@@ -194,6 +194,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     # for high dpi displays
     app.setAttribute(Qt.AA_UseHighDpiPixmaps)
+    app.setAttribute(Qt.AA_EnableHighDpiScaling)
     # create the app main window
     window = SumoManager()
 
