@@ -23,7 +23,7 @@ exe = EXE(pyz,
           debug=False,
           strip=False,
           upx=True,
-          console=False , icon='res/sumologo.icns')
+          console=False , icon='res/sumologo.ico')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
