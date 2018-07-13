@@ -186,31 +186,30 @@ class Pyboard:
             n = self.serial.inWaiting()
 
         self.serial.write(b'\r\x01') # ctrl-A: enter raw REPL
-        self.serial.write(b'\r\x01') # ctrl-A: enter raw REPL
         data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n>')
         if not data.endswith(b'raw REPL; CTRL-B to exit\r\n>'):
             print(data)
             raise PyboardError('could not enter raw repl')
 
-        #self.serial.write(b'\x04') # ctrl-D: soft reset
-        #data = self.read_until(1, b'soft reboot\r\n')
-        #if not data.endswith(b'soft reboot\r\n'):
-        #    print(data)
-        #    raise PyboardError('could not enter raw repl')
+        self.serial.write(b'\x04') # ctrl-D: soft reset
+        data = self.read_until(1, b'soft reboot\r\n')
+        if not data.endswith(b'soft reboot\r\n'):
+            print(data)
+            raise PyboardError('could not enter raw repl')
         # By splitting this into 2 reads, it allows boot.py to print stuff,
         # which will show up after the soft reboot and before the raw REPL.
         # Modification from original pyboard.py below:
         #   Add a small delay and send Ctrl-C twice after soft reboot to ensure
         #   any main program loop in main.py is interrupted.
-        #time.sleep(0.5)
-        #self.serial.write(b'\x03')
-        #time.sleep(0.1)           # (slight delay before second interrupt
-        #self.serial.write(b'\x03')
+        time.sleep(0.5)
+        self.serial.write(b'\x03')
+        time.sleep(0.1)           # (slight delay before second interrupt
+        self.serial.write(b'\x03')
         # End modification above.
-        #data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n')
-        #if not data.endswith(b'raw REPL; CTRL-B to exit\r\n'):
-        #    print(data)
-        #    raise PyboardError('could not enter raw repl')
+        data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n')
+        if not data.endswith(b'raw REPL; CTRL-B to exit\r\n'):
+            print(data)
+            raise PyboardError('could not enter raw repl')
 
     def exit_raw_repl(self):
         self.serial.write(b'\r\x02') # ctrl-B: enter friendly REPL
