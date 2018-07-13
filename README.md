@@ -6,9 +6,10 @@
 
 ## How to use
 
-1. Select serial port
-2. Add WiFi credentials
-3. Press add WiFi network
+1. Plug in SumoRobot
+2. Select WiFi network
+3. Add network password
+4. Press add WiFi network
 
 ## License
 
