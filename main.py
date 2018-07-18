@@ -35,7 +35,7 @@ APP_NAME = 'SumoManager v0.4'
 
 # Firmware URLs
 MICROPYTHON_URL = 'https://micropython.org/download'
-SUMOFIRMWARE_URL = ''
+SUMOFIRMWARE_URL = 'https://raw.githubusercontent.com/robokoding/sumorobot-firmware/master/'
 
 # Define the resource path
 RESOURCE_PATH = 'res'
@@ -60,7 +60,7 @@ class SumoManager(QMainWindow):
 
         self.connected_port = None
         self.update_firmware = False
-        self.add_wifi_disabled = False
+        self.update_config = False
 
     def initUI(self):
         # Load the Orbitron font
@@ -107,12 +107,15 @@ class SumoManager(QMainWindow):
         # Add menubar items
         menubar = self.menuBar()
         file_menu = menubar.addMenu('File')
-
+        # Update firmware menu
         update_firmware = QAction('Update Firmware', self)
         update_firmware.triggered.connect(self.update_firmware)
         file_menu.addAction(update_firmware)
 
-        # Show a message to expand the window
+        # Add the statusbar into a toolbar
+        toolbar = self.addToolBar("Main")
+        self.statusBar = QStatusBar()
+        toolbar.addWidget(self.statusBar)
         self.show_message('warning', 'Please connect your SumoRobot')
 
         # Main window style, layout and position
@@ -142,13 +145,13 @@ class SumoManager(QMainWindow):
         else: # Unrecognized message type
             return
 
-        self.statusBar().setStyleSheet(style)
-        self.statusBar().showMessage(message)
+        self.statusBar.setStyleSheet(style)
+        self.statusBar.showMessage(message)
 
     # Button clicked event
     def button_clicked(self):
         # When button disabled or SumoRobot is not connected
-        if self.add_wifi_disabled or not self.connected_port:
+        if self.update_config or not self.connected_port:
             return
 
         # When the network name is not valid
@@ -160,7 +163,7 @@ class SumoManager(QMainWindow):
             self.wifi_select.setStyleSheet('background: rgba(212,212,255,0.035);')
 
         # Disable adding another network until the current one is added
-        self.add_wifi_disabled = True
+        self.update_config = True
 
     # When mouse clicked clear the focus on the input fields
     def mousePressEvent(self, event):
@@ -178,7 +181,6 @@ class SumoManager(QMainWindow):
             self.show_message('info', 'Successfuly loaded WiFi networks')
             self.wifi_select.setStyleSheet('background: #2d3252;')
         elif isinstance(data, str):
-            self.connected_port = data
             self.serial_image.setPixmap(QPixmap(USB_CONNECTED_IMG))
             self.show_message('warning', 'Loading Wifi netwroks...')
         else:
@@ -187,10 +189,10 @@ class SumoManager(QMainWindow):
             self.show_message('warning', 'Please connect your SumoRobot')
 
     def update_firmware(self, event):
-        # When SumoRobot is connected
-        #if window.connected_port:
-            # Start the update firmware thread
-        self.update_firmware = True
+        # When SumoRobot is connected and update config is not running
+        if window.connected_port and not window.update_config:
+            # Start the update firmware process
+            self.update_firmware = True
 
 class UpdateFirmware(QThread):
     def run(self):
@@ -200,29 +202,50 @@ class UpdateFirmware(QThread):
                 time.sleep(1)
                 continue
 
-            window.message.emit('warning', 'Updating firmware...')
+            #window.message.emit('warning', 'Updating firmware...')
             try:
                 # Open and parse the MicroPython URL
-                response = urllib.request.urlopen(MICROPYTHON_URL)
-                line = response.readline()
-                while line:
+                #response = urllib.request.urlopen(MICROPYTHON_URL)
+                #line = response.readline()
+                #while line:
                     # Find the firmware binary URL
-                    if b'firmware/esp32' in line:
-                        firmware_url = line.split(b'"')[1]
-                        break
-                    line = response.readline()
+                #    if b'firmware/esp32' in line:
+                #        firmware_url = line.split(b'"')[1]
+                #        break
+                #    line = response.readline()
                 # Open the parsed firmware binary URL
-                response = urllib.request.urlopen(firmware_url.decode('utf-8'))
+                #response = urllib.request.urlopen(firmware_url.decode('utf-8'))
                 # Write the firmware binary into a local file
-                f = open('firmware.bin', 'wb')
-                f.write(response.read())
-                f.close()
+                #f = open('firmware.bin', 'wb')
+                #f.write(response.read())
+                #f.close()
 
-                esp = ESPLoader.detect_chip(window.connected_port)
-                esp._port.close()
+                #esp = ESPLoader.detect_chip(window.connected_port)
+                #esp._port.close()
+
+                # Firmware files to update
+                file_names = ['uwebsockets.py', 'config.json', 'hal.py', 'main.py', 'boot.py']
+                data = dict.fromkeys(file_names)
+
+                for file in file_names:
+                    window.message.emit('warning', 'Downloading firmware... ' + file)
+                    # Fetch the file from the Internet
+                    response = urllib.request.urlopen(SUMOFIRMWARE_URL + file)
+                    data[file] = response.read()
+
+                # Open the serial port
+                board = Files(Pyboard(window.connected_port, rawdelay=0.5))
+
+                for file in file_names:
+                    window.message.emit('warning', 'Updating firmware... ' + file)
+                    # Update file
+                    board.put(file, data[file])
+
+                # Close serial port
+                board.close()
+
                 window.message.emit('info', 'Successfully updated firmware')
-            except Exception as e:
-                print(e)
+            except:
                 window.message.emit('error', 'Failed to update firmware')
 
             # Stop the update thread
@@ -231,8 +254,8 @@ class UpdateFirmware(QThread):
 class UpdateConfig(QThread):
     def run(self):
         while True:
-            # Wait until add WiFi is triggered
-            if not window.add_wifi_disabled:
+            # Wait until update config is triggered
+            if not window.update_config:
                 time.sleep(1)
                 continue
 
@@ -255,12 +278,11 @@ class UpdateConfig(QThread):
                 board.reset()
                 board.close()
                 window.message.emit('info', 'Successfully added WiFi credentials')
-            except Exception as e:
-                print(e)
+            except:
                 window.message.emit('error', 'Failed to read config file')
 
             # Enable the WiFi add button
-            window.add_wifi_disabled = False
+            window.update_config = False
 
 class PortUpdate(QThread):
     # To update serialport status
@@ -288,10 +310,11 @@ class PortUpdate(QThread):
                     networks = board.get_networks()
                     # Close the serial connection
                     board.close()
-                except Exception as e:
+                except:
                     #print(e)
                     window.message.emit('error', 'Error loading WiFi networks')
                     continue
+                window.connected_port = port
                 window.usb_list.emit(networks)
             # When no serial port with the specific vendor ID was found
             elif not port:
