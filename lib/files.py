@@ -168,49 +168,6 @@ class Files(object):
         self._pyboard.exec_('f.close()')
         self._pyboard.exit_raw_repl()
 
-    def reset(self):
-        command_bytes = b'\r\x03\x03import machine;machine.reset()\n'
-        self._pyboard.serial.write(command_bytes)
-        self._pyboard.serial.write(command_bytes)
-
-    def get_networks(self):
-        """Retrieve the wifi network names."""
-        # Scan the WiFi networks and return them
-        # Be careful not to overload the UART buffer so only write
-        # a few bytes at a time, and don't use print since it adds newlines and
-        # expects string data.
-        command = """
-            import sys
-            import network
-            from machine import ADC, Pin
-            wlan = network.WLAN(network.STA_IF)
-            wlan.active(True)
-            networks = wlan.scan()
-            for network in networks:
-                ssid = network[0].decode('utf-8')
-                sys.stdout.write(ssid + '&')
-            vol = round(2.25 * (ADC(Pin(32)).read() * 3.3 / 4096), 2)
-            sys.stdout.write(str(vol))
-        """
-        self._pyboard.enter_raw_repl()
-        try:
-            out = self._pyboard.exec_(textwrap.dedent(command))
-            print("networks: ", out)
-            # Decode bytes into a string
-            out = out.decode('utf-8')
-            print("utf-8: ", out)
-            # When there is some redundant output
-            if '\n' in out:
-                out = out.split('\n')[1]
-                print("split n: ", out)
-            # Split the networks into a list
-            out = out.split('&')
-            print("split &: ", out)
-        except PyboardError as ex:
-            raise ex
-        self._pyboard.exit_raw_repl()
-        return out
-
     def rm(self, filename):
         """Remove the specified file or directory."""
         command = """
@@ -294,5 +251,47 @@ class Files(object):
             # won't wait for it to finish or return output.
             with open(filename, 'rb') as infile:
                 self._pyboard.exec_raw_no_follow(infile.read())
+        self._pyboard.exit_raw_repl()
+        return out
+
+    def close(self):
+        self._pyboard.close()
+
+    def reset(self):
+        command_bytes = b'\r\x03\x03import machine;machine.reset()\n'
+        self._pyboard.serial.write(command_bytes)
+        self._pyboard.serial.write(command_bytes)
+
+    def get_networks(self):
+        """Retrieve the wifi network names."""
+        # Scan the WiFi networks and return them
+        # Be careful not to overload the UART buffer so only write
+        # a few bytes at a time, and don't use print since it adds newlines and
+        # expects string data.
+        command = """
+            import sys
+            import network
+            from machine import ADC, Pin
+            wlan = network.WLAN(network.STA_IF)
+            wlan.active(True)
+            networks = wlan.scan()
+            for network in networks:
+                ssid = network[0].decode('utf-8')
+                sys.stdout.write(ssid + '&')
+            vol = round(2.25 * (ADC(Pin(32)).read() * 3.3 / 4096), 2)
+            sys.stdout.write(str(vol))
+        """
+        self._pyboard.enter_raw_repl()
+        try:
+            out = self._pyboard.exec_(textwrap.dedent(command))
+            # Decode bytes into a string
+            out = out.decode('utf-8')
+            # When there is some redundant output
+            if '\n' in out:
+                out = out.split('\n')[-1]
+            # Split the networks into a list
+            out = out.split('&')
+        except PyboardError as ex:
+            raise ex
         self._pyboard.exit_raw_repl()
         return out

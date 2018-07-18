@@ -26,13 +26,17 @@ QPushButton:hover {
     border: 2px solid #ffd500;
 }
 
+QComboBox {
+    padding-left: 2px;
+}
+
 QLineEdit, QComboBox {
     width: 20em;
     height: 2em;
     border: none;
     font-family: Orbitron;
-    color: rgba(244,244,255,0.5);
-    background: rgba(212,212,255,0.035);
+    background-color: #2d3252;
+    color: rgba(244, 244, 255, 0.5);
 }
 
 QLineEdit:focus, QComboBox:focus {
