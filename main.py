@@ -109,7 +109,6 @@ class SumoManager(QMainWindow):
         file_menu = menubar.addMenu('File')
 
         update_firmware = QAction('Update Firmware', self)
-        update_firmware.setStatusTip('Update the firmware on the SumoRobot')
         update_firmware.triggered.connect(self.update_firmware)
         file_menu.addAction(update_firmware)
 
@@ -219,7 +218,7 @@ class UpdateFirmware(QThread):
                 f.write(response.read())
                 f.close()
 
-                esp = ESPLoader.detect_chip('/dev/tty.wchusbserial1410')
+                esp = ESPLoader.detect_chip(window.connected_port)
                 esp._port.close()
                 window.message.emit('info', 'Successfully updated firmware')
             except Exception as e:

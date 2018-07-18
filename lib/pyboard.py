@@ -131,6 +131,9 @@ class Pyboard:
             for attempt in range(wait + 1):
                 try:
                     self.serial = serial.Serial(device, baudrate=baudrate, interCharTimeout=1)
+                    # Reset the device
+                    self.serial.setDTR(False)
+                    self.serial.setRTS(False)
                     break
                 except (OSError, IOError): # Py2 and Py3 have different errors
                     if wait == 0:
