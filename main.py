@@ -274,8 +274,11 @@ class UpdateConfig(QThread):
                 config = json.dumps(config, indent = 8)
                 # Write the updates config file
                 board.put('config.json', config)
-                # Reset the board and close serial
-                board.reset()
+                # Close serial
+                board.close()
+                # Initiate another connection to reset the board
+                # TODO: implement more elegantly
+                board = Files(Pyboard(window.connected_port, rawdelay=0.5))
                 board.close()
                 window.message.emit('info', 'Successfully added WiFi credentials')
             except:
