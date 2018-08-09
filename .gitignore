@@ -1,9 +1,6 @@
 # Mac
 .DS_Store
 
-# pyinstaller config
-*.spec
-
 # Compiled binaries
 build/
 dist/
