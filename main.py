@@ -31,7 +31,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # App name
-APP_NAME = 'SumoManager v0.4'
+APP_NAME = 'SumoManager v0.5'
 
 # Firmware URLs
 MICROPYTHON_URL = 'https://micropython.org/download'
