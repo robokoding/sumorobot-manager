@@ -244,7 +244,7 @@ class UpdateFirmware(QThread):
                 esp.flash_set_parameters(flash_size_bytes('4MB'))
                 esp.FLASH_WRITE_SIZE = 0x4000
                 esp.ESP_FLASH_DEFL_BEGIN = 0x10
-                window.message.emit('warning', 'Updating firmware... esp32.bin')
+                window.message.emit('warning', 'Uploading firmware... esp32.bin')
                 write_flash(esp, argparse.Namespace(
                     addr_filename=[(4096, open(temp_file.fileName(), 'rb'))],
                     verify=False,
@@ -262,7 +262,7 @@ class UpdateFirmware(QThread):
                 board = Files(Pyboard(window.connected_port, rawdelay=0.5))
 
                 for file in file_names:
-                    window.message.emit('warning', 'Updating firmware... ' + file)
+                    window.message.emit('warning', 'Uploading firmware... ' + file)
                     # Update file
                     board.put(file, data[file])
 
