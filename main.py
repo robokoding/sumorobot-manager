@@ -17,6 +17,7 @@ import os
 import sys
 import json
 import time
+import argparse
 import urllib.request
 import serial.tools.list_ports
 
@@ -24,6 +25,8 @@ import serial.tools.list_ports
 from lib.files import Files
 from lib.pyboard import Pyboard
 from lib.esptool import ESPLoader
+from lib.esptool import write_flash
+from lib.esptool import flash_size_bytes
 
 # pyqt imports
 from PyQt5.QtWidgets import *
@@ -202,26 +205,26 @@ class UpdateFirmware(QThread):
                 time.sleep(1)
                 continue
 
-            #window.message.emit('warning', 'Updating firmware...')
+            window.message.emit('warning', 'Updating firmware...')
             try:
                 # Open and parse the MicroPython URL
-                #response = urllib.request.urlopen(MICROPYTHON_URL)
-                #line = response.readline()
-                #while line:
+                response = urllib.request.urlopen(MICROPYTHON_URL)
+                line = response.readline()
+                while line:
                     # Find the firmware binary URL
-                #    if b'firmware/esp32' in line:
-                #        firmware_url = line.split(b'"')[1]
-                #        break
-                #    line = response.readline()
-                # Open the parsed firmware binary URL
-                #response = urllib.request.urlopen(firmware_url.decode('utf-8'))
-                # Write the firmware binary into a local file
-                #f = open('firmware.bin', 'wb')
-                #f.write(response.read())
-                #f.close()
+                    if b'firmware/esp32' in line:
+                        firmware_url = line.split(b'"')[1]
+                        break
+                    line = response.readline()
 
-                #esp = ESPLoader.detect_chip(window.connected_port)
-                #esp._port.close()
+                window.message.emit('warning', 'Downloading firmware... esp32.bin')
+                # Open the parsed firmware binary URL
+                response = urllib.request.urlopen(firmware_url.decode('utf-8'))
+                # Write the firmware binary into a local file
+                temp_file = QTemporaryFile()
+                temp_file.open()
+                temp_file.writeData(response.read())
+                temp_file.flush()
 
                 # Firmware files to update
                 file_names = ['uwebsockets.py', 'config.json', 'hal.py', 'main.py', 'boot.py']
@@ -232,6 +235,28 @@ class UpdateFirmware(QThread):
                     # Fetch the file from the Internet
                     response = urllib.request.urlopen(SUMOFIRMWARE_URL + file)
                     data[file] = response.read()
+
+                esp = ESPLoader.detect_chip(window.connected_port)
+                esp.run_stub()
+                esp.IS_STUB = True
+                esp.change_baud(460800)
+                esp.STATUS_BYTES_LENGTH = 2
+                esp.flash_set_parameters(flash_size_bytes('4MB'))
+                esp.FLASH_WRITE_SIZE = 0x4000
+                esp.ESP_FLASH_DEFL_BEGIN = 0x10
+                window.message.emit('warning', 'Updating firmware... esp32.bin')
+                write_flash(esp, argparse.Namespace(
+                    addr_filename=[(4096, open(temp_file.fileName(), 'rb'))],
+                    verify=False,
+                    compress=None,
+                    no_stub=False,
+                    flash_mode='dio',
+                    flash_size='4MB',
+                    flash_freq='keep',
+                    no_compress=False))
+                esp.hard_reset()
+                print("Closing port")
+                esp._port.close()
 
                 # Open the serial port
                 board = Files(Pyboard(window.connected_port, rawdelay=0.5))
@@ -313,12 +338,12 @@ class PortUpdate(QThread):
                     networks = board.get_networks()
                     # Close the serial connection
                     board.close()
+                    # Emit a signal to populate networks
+                    window.usb_list.emit(networks)
                 except:
-                    #print(e)
                     window.message.emit('error', 'Error loading WiFi networks')
-                    continue
+
                 window.connected_port = port
-                window.usb_list.emit(networks)
             # When no serial port with the specific vendor ID was found
             elif not port:
                 window.usb_dcon.emit()
