@@ -1,4 +1,4 @@
-# sumorobot-wifi-manager
+# sumorobot-manager
 
 ## How to run
 
