@@ -21,6 +21,10 @@ QPushButton {
     background: transparent;
 }
 
+QStatusBar {
+    
+}
+
 QPushButton:hover {
     color: #ffd500;
     border: 2px solid #ffd500;
