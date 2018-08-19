@@ -35,7 +35,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # App name
-APP_NAME = 'SumoManager v0.5.1'
+APP_NAME = 'SumoManager v0.5.2'
 
 # Firmware URLs
 MICROPYTHON_URL = 'http://micropython.org/download'
@@ -64,8 +64,6 @@ class SumoManager(QMainWindow):
         super().__init__()
         self.initUI()
 
-        self.dialog_title = None
-        self.dialog_message = None
         self.connected_port = None
         self.update_config = False
         self.update_firmware = False
@@ -92,12 +90,14 @@ class SumoManager(QMainWindow):
         self.wifi_select.addItems(['Network name'])
         self.wifi_select.setEnabled(False)
         self.wifi_pwd_edit = QLineEdit()
+        self.wifi_pwd_edit.setEchoMode(QLineEdit.Password);
         self.wifi_pwd_edit.setPlaceholderText("Password")
 
         # WiFi add button
         self.add_wifi_btn = QPushButton('Add WiFi network', self)
         self.add_wifi_btn.setCursor(QCursor(Qt.PointingHandCursor))
         self.add_wifi_btn.clicked.connect(self.button_clicked)
+        self.wifi_pwd_edit.returnPressed.connect(self.button_clicked)
 
         # Add the statusbar into a toolbar
         self.tool_bar = self.addToolBar('Main')
@@ -133,6 +133,8 @@ class SumoManager(QMainWindow):
         self.setCentralWidget(main_widget)
         self.show()
         self.center()
+        # To lose focus on the textedit field
+        self.setFocus()
 
     # Function to center the mainwindow on the screen
     def center(self):
@@ -146,12 +148,12 @@ class SumoManager(QMainWindow):
     def show_message(self, type, message):
         self.status_bar.setCursor(QCursor(Qt.ArrowCursor))
         if type == 'error':
-            style = 'color: #d9534f;'
+            style = 'color: #d63634;'
             self.status_bar.setCursor(QCursor(Qt.PointingHandCursor))
         elif type == 'warning':
-            style = 'color: #f0ad4e;'
+            style = 'color: #e77e34;'
         elif type == 'info':
-            style = 'color: #5cb85c;'
+            style = 'color: #1cc761;'
         else: # Unrecognized message type
             return
 
@@ -170,7 +172,7 @@ class SumoManager(QMainWindow):
             self.wifi_select.setStyleSheet('background-color: #d9534f;')
             return
         else: # When the network name is valid, remove the error
-            self.wifi_select.setStyleSheet('background: rgba(212,212,255,0.035);')
+            self.wifi_select.setStyleSheet('background-color: #2d3252;')
 
         # Disable adding another network until the current one is added
         self.update_config = True
@@ -178,7 +180,6 @@ class SumoManager(QMainWindow):
     # When mouse clicked clear the focus on the input fields
     def mousePressEvent(self, event):
         # When the status bar is pressed
-        self.wifi_select.clearFocus()
         self.wifi_pwd_edit.clearFocus()
 
     @pyqtSlot()
@@ -190,7 +191,7 @@ class SumoManager(QMainWindow):
             self.wifi_select.addItems(data)
             self.wifi_select.setEnabled(True)
             self.show_message('info', 'Successfuly loaded WiFi networks')
-            self.wifi_select.setStyleSheet('background: #2d3252;')
+            self.wifi_select.setStyleSheet('background-color: #2d3252;')
         elif isinstance(data, str):
             self.serial_image.setPixmap(QPixmap(USB_CONNECTED_IMG))
             self.show_message('warning', 'Loading Wifi netwroks...')
@@ -294,16 +295,17 @@ class UpdateFirmware(QThread):
                 # Close serial port
                 board.close()
                 window.message.emit('info', 'Successfully updated firmware')
+                # Try to laod WiFi networks again
+                window.connected_port = None;
             except:
                 # Close the serial port
                 esp._port.close()
                 board.close()
-                window.dialog.emit('Error adding WiFi credentials',
-                    '* Please turn the SumoRobot off\n' +
+                window.dialog.emit('Error updating firmware',
                     '* Try reconnecting the SumoRobot\n' +
-                    '* Check your Internet connection',
+                    '* Check your Internet connection\n', +
+                    '* Finally try updating firmware again',
                     traceback.format_exc(), None)
-                window.dialog_title = 'Error updating firmware'
                 window.message.emit('error', 'Error updating firmware')
 
             # Stop the update thread
@@ -349,9 +351,9 @@ class UpdateConfig(QThread):
                 # Close the serial connection
                 board.close()
                 window.dialog.emit('Error adding WiFi credentials',
-                    '* Please turn the SumoRobot off\n' +
                     '* Try reconnecting the SumoRobot\n' +
-                    '* Try updating firmware File > Update Firmware',
+                    '* Try adding WiFi credentials again\n', +
+                    '* When nothing helped, try File > Update Firmware',
                     traceback.format_exc(), None)
                 window.message.emit('error', 'Error adding WiFi credentials')
 
@@ -390,9 +392,8 @@ class PortUpdate(QThread):
                     # Close the serial connection
                     board.close()
                     window.dialog.emit('Error loading WiFi networks',
-                        '* Please turn the SumoRobot off\n' +
                         '* Try reconnecting the SumoRobot\n' +
-                        '* Try updating firmware File > Update Firmware',
+                        '* Try updating firmware File > Update Firmware (close this dialog first)',
                         traceback.format_exc(), None)
                     window.message.emit('error', 'Error loading WiFi networks')
 

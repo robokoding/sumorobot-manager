@@ -27,18 +27,30 @@ QPushButton:hover {
 }
 
 QComboBox {
+    color: #9297aa;
     padding-left: 2px;
+}
+
+QLineEdit {
+    color: rgba(244, 244, 255, 0.5);
+    lineedit-password-character: 9679;
+    lineedit-password-mask-delay: 1000;
+}
+
+QComboBox QAbstractItemView {
+    color: #9297aa;
+    padding-top: 5px;
+    padding-bottom: 5px;
 }
 
 QLineEdit, QComboBox {
     width: 20em;
     height: 2em;
-    border: none;
     font-family: Orbitron;
+    border: 2px solid #2d3252;
     background-color: #2d3252;
-    color: rgba(244, 244, 255, 0.5);
 }
 
-QLineEdit:focus, QComboBox:focus {
+QLineEdit:focus {
     border: 2px solid #ffd500;
 }
