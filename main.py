@@ -227,7 +227,7 @@ class SumoManager(QMainWindow):
         if self.connected_port and not self.processing:
             self.show_dialog('Config file',
                 'Click Show Details... to see the SumoRobot config file contents',
-                json.dumps(self.config, indent=8), None)
+                json.dumps(self.config, indent=8))
 
     def update_id(self, event):
         if self.connected_port and not self.processing:
@@ -245,7 +245,7 @@ class UpdateID(QThread):
             window.message.emit('warning', 'Updating SumoID...')
             try:
                 # Generate a random robot ID
-                random = ''.join(secrets.choice(string.printable) for i in range(8))
+                random = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(8))
                 window.config['sumo_id'] = random
                 # Save the random ID on the SumoRobot
                 board = Files(Pyboard(window.connected_port, rawdelay=0.5))
@@ -311,12 +311,18 @@ class UpdateFirmware(QThread):
 
                 # In case the user has a personalized config file
                 if window.config:
-                    # Use that instead of the downloaded one
-                    data['config.json'] = json.dumps(window.config, indent=8)
+                    # Transfer the personalized values
+                    tmp_config = json.loads(data['config.json'])
+                    tmp_config['wifis'] = window.config['wifis']
+                    tmp_config['sumo_id'] = window.config['sumo_id']
+                    #tmp_config['sumo_server'] = window.config['sumo_server']
+                    tmp_config['status_led_pin'] = window.config['status_led_pin']
+                    tmp_config['ultrasonic_distance'] = window.config['ultrasonic_distance']
+                    data['config.json'] = json.dumps(tmp_config, indent=8)
                 # In case it's the default config file
                 else:
                     # Generate a random robot ID
-                    random = ''.join(secrets.choice(string.printable) for i in range(8))
+                    random = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(8))
                     window.config = json.loads(data['config.json'])
                     window.config['sumo_id'] = random
                     data['config.json'] = json.dumps(window.config, indent=8)
