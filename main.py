@@ -122,7 +122,7 @@ class SumoManager(QMainWindow):
         menubar = self.menuBar()
         file_menu = menubar.addMenu('File')
         # Show config menu item
-        show_config = QAction('Show config', self)
+        show_config = QAction('Show SumoConfig', self)
         show_config.triggered.connect(self.show_config)
         file_menu.addAction(show_config)
         # Update robot ID menu item
@@ -130,7 +130,7 @@ class SumoManager(QMainWindow):
         update_id.triggered.connect(self.update_id)
         file_menu.addAction(update_id)
         # Update firmware menu item
-        update_firmware = QAction('Update Firmware', self)
+        update_firmware = QAction('Update SumoFirmware', self)
         update_firmware.triggered.connect(self.update_firmware)
         file_menu.addAction(update_firmware)
 
@@ -225,8 +225,8 @@ class SumoManager(QMainWindow):
 
     def show_config(self, event):
         if self.connected_port and not self.processing:
-            self.show_dialog('Config file',
-                'Click Show Details... to see the SumoRobot config file contents',
+            self.show_dialog('SumoConfig',
+                'Click Show Details... to see the SumoConfig contents',
                 json.dumps(self.config, indent=8))
 
     def update_id(self, event):
@@ -276,7 +276,7 @@ class UpdateFirmware(QThread):
                 time.sleep(1)
                 continue
 
-            window.message.emit('warning', 'Updating firmware...')
+            window.message.emit('warning', 'Updating SumoFirmware...')
             try:
                 esp = None
                 board = None
@@ -290,7 +290,7 @@ class UpdateFirmware(QThread):
                         break
                     line = response.readline()
 
-                window.message.emit('warning', 'Downloading firmware... esp32.bin')
+                window.message.emit('warning', 'Downloading SumoFirmware... esp32.bin')
                 # Open the parsed firmware binary URL
                 response = urllib.request.urlopen(firmware_url.decode('utf-8'))
                 # Write the firmware binary into a local file
@@ -304,7 +304,7 @@ class UpdateFirmware(QThread):
 
                 # Download all firmware files
                 for file_name in FIRMWARE_FILE_NAMES:
-                    window.message.emit('warning', 'Downloading firmware... ' + file_name)
+                    window.message.emit('warning', 'Downloading SumoFirmware... ' + file_name)
                     # Fetch the file from the Internet
                     response = urllib.request.urlopen(SUMOFIRMWARE_URL + file_name)
                     data[file_name] = response.read()
@@ -336,7 +336,7 @@ class UpdateFirmware(QThread):
                 esp.flash_set_parameters(flash_size_bytes('4MB'))
                 esp.FLASH_WRITE_SIZE = 0x4000
                 esp.ESP_FLASH_DEFL_BEGIN = 0x10
-                window.message.emit('warning', 'Uploading firmware... esp32.bin')
+                window.message.emit('warning', 'Uploading SumoFirmware... esp32.bin')
                 write_flash(esp, argparse.Namespace(
                     addr_filename=[(4096, open(temp_file.fileName(), 'rb'))],
                     verify=False,
@@ -354,13 +354,13 @@ class UpdateFirmware(QThread):
 
                 # Go trough all the files
                 for file_name in FIRMWARE_FILE_NAMES:
-                    window.message.emit('warning', 'Uploading firmware... ' + file_name)
+                    window.message.emit('warning', 'Uploading SumoFirmware... ' + file_name)
                     # Update file
                     board.put(file_name, data[file_name])
 
                 # Close serial port
                 board.close()
-                window.message.emit('info', 'Successfully updated firmware')
+                window.message.emit('info', 'Successfully updated SumoFirmware')
                 # Try to laod WiFi networks again
                 window.connected_port = None
             except:
@@ -369,12 +369,12 @@ class UpdateFirmware(QThread):
                     esp._port.close()
                 if board:
                     board.close()
-                window.dialog.emit('Error updating firmware',
+                window.dialog.emit('Error updating SumoFirmware',
                     '* Try reconnecting the SumoRobot USB cable<br>' +
                     '* Check your Internet connection<br>' +
-                    '* Finally try updating firmware again',
+                    '* Finally try updating SumoFirmware again',
                     traceback.format_exc())
-                window.message.emit('error', 'Error updating firmware')
+                window.message.emit('error', 'Error updating SumoFirmware')
 
             # Indicate that no process is running
             window.processing = None
@@ -425,7 +425,7 @@ class UpdateNetworks(QThread):
                 window.dialog.emit('Error adding WiFi credentials',
                     '* Try reconnecting the SumoRobot USB cable<br>' +
                     '* Try adding WiFi credentials again<br>', +
-                    '* When nothing helped, try File > Update Firmware',
+                    '* When nothing helped, try File > Update SumoFirmware',
                     traceback.format_exc())
                 window.message.emit('error', 'Error adding WiFi credentials')
 
@@ -469,7 +469,7 @@ class PortUpdate(QThread):
                     board.close()
                     window.dialog.emit('Error loading WiFi networks',
                         '* Try reconnecting the SumoRobot USB cable<br>' +
-                        '* Try updating firmware File > Update Firmware (close this dialog first)',
+                        '* Try updating SumoFirmware File > Update SumoFirmware (close this dialog first)',
                         traceback.format_exc())
                     window.message.emit('error', 'Error loading WiFi networks')
 
