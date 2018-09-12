@@ -4,7 +4,7 @@
 """
 SumoManager
 
-Manager different functions on the
+Manage different functions on the
 RoboKoding SumoRobots.
 
 Author: RoboKoding LTD
@@ -17,28 +17,29 @@ import os
 import sys
 import json
 import time
+import string
+import secrets
 import argparse
 import traceback
 import urllib.request
 import serial.tools.list_ports
 
 # Local lib imports
+from lib.esptool import *
 from lib.files import Files
 from lib.pyboard import Pyboard
-from lib.esptool import ESPLoader
-from lib.esptool import write_flash
-from lib.esptool import flash_size_bytes
 
 # pyqt imports
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
 from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 
 # App name
-APP_NAME = 'SumoManager v0.5.2'
+APP_NAME = 'SumoManager v0.6'
 
-# Firmware URLs
+# Firmware URLs, file names
 MICROPYTHON_URL = 'http://micropython.org/download'
+FIRMWARE_FILE_NAMES = ['uwebsockets.py', 'config.json', 'hal.py', 'main.py', 'boot.py']
 SUMOFIRMWARE_URL = 'https://raw.githubusercontent.com/robokoding/sumorobot-firmware/master/'
 
 # Define the resource path
@@ -47,26 +48,25 @@ if hasattr(sys, '_MEIPASS'):
     RESOURCE_PATH = os.path.join(sys._MEIPASS, RESOURCE_PATH)
 
 # Resource URLs
-USB_IMG = os.path.join(RESOURCE_PATH, 'usb.png')
 SUMO_IMG = os.path.join(RESOURCE_PATH, 'sumologo.svg')
-BLUE_LED_IMG = os.path.join(RESOURCE_PATH, 'blue_led.jpg')
+USB_CON_IMG = os.path.join(RESOURCE_PATH, 'usb_con.png')
+USB_DCON_IMG = os.path.join(RESOURCE_PATH, 'usb_dcon.png')
 ORBITRON_FONT = os.path.join(RESOURCE_PATH, 'orbitron.ttf')
-USB_CONNECTED_IMG = os.path.join(RESOURCE_PATH, 'usb_connected.png')
 
 class SumoManager(QMainWindow):
     usb_dcon = pyqtSignal()
     usb_con = pyqtSignal(str)
     usb_list = pyqtSignal(list)
     message = pyqtSignal(str, str)
-    dialog = pyqtSignal(str, str, str, str)
+    dialog = pyqtSignal(str, str, str)
 
     def __init__(self):
         super().__init__()
         self.initUI()
 
+        self.config = None
+        self.processing = None
         self.connected_port = None
-        self.update_config = False
-        self.update_firmware = False
 
     def initUI(self):
         # Load the Orbitron font
@@ -81,7 +81,7 @@ class SumoManager(QMainWindow):
         serial_label = QLabel('1. Connect SumoRobot via USB')
         serial_label.setStyleSheet('margin-top: 20px;')
         self.serial_image = QLabel()
-        self.serial_image.setPixmap(QPixmap(USB_IMG))
+        self.serial_image.setPixmap(QPixmap(USB_DCON_IMG))
 
         # WiFi credentials fields
         wifi_label = QLabel('2. Enter WiFi credentials')
@@ -90,7 +90,7 @@ class SumoManager(QMainWindow):
         self.wifi_select.addItems(['Network name'])
         self.wifi_select.setEnabled(False)
         self.wifi_pwd_edit = QLineEdit()
-        self.wifi_pwd_edit.setEchoMode(QLineEdit.Password);
+        self.wifi_pwd_edit.setEchoMode(QLineEdit.Password)
         self.wifi_pwd_edit.setPlaceholderText("Password")
 
         # WiFi add button
@@ -121,6 +121,14 @@ class SumoManager(QMainWindow):
         # Add menubar items
         menubar = self.menuBar()
         file_menu = menubar.addMenu('File')
+        # Show config menu item
+        show_config = QAction('Show config', self)
+        show_config.triggered.connect(self.show_config)
+        file_menu.addAction(show_config)
+        # Update robot ID menu item
+        update_id = QAction('Update SumoID', self)
+        update_id.triggered.connect(self.update_id)
+        file_menu.addAction(update_id)
         # Update firmware menu item
         update_firmware = QAction('Update Firmware', self)
         update_firmware.triggered.connect(self.update_firmware)
@@ -141,15 +149,12 @@ class SumoManager(QMainWindow):
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
-        print(qr.topLeft())
         self.move(qr.topLeft())
 
     @pyqtSlot(str, str)
     def show_message(self, type, message):
-        self.status_bar.setCursor(QCursor(Qt.ArrowCursor))
         if type == 'error':
             style = 'color: #d63634;'
-            self.status_bar.setCursor(QCursor(Qt.PointingHandCursor))
         elif type == 'warning':
             style = 'color: #e77e34;'
         elif type == 'info':
@@ -159,28 +164,6 @@ class SumoManager(QMainWindow):
 
         self.status_bar.setStyleSheet(style)
         self.status_bar.showMessage(message)
-
-    # Button clicked event
-    def button_clicked(self):
-        # When button disabled or SumoRobot is not connected
-        if self.update_config or not self.connected_port:
-            return
-
-        # When the network name is not valid
-        if self.wifi_select.currentText() == 'Network name':
-            # Show the error
-            self.wifi_select.setStyleSheet('background-color: #d9534f;')
-            return
-        else: # When the network name is valid, remove the error
-            self.wifi_select.setStyleSheet('background-color: #2d3252;')
-
-        # Disable adding another network until the current one is added
-        self.update_config = True
-
-    # When mouse clicked clear the focus on the input fields
-    def mousePressEvent(self, event):
-        # When the status bar is pressed
-        self.wifi_pwd_edit.clearFocus()
 
     @pyqtSlot()
     @pyqtSlot(str)
@@ -193,46 +176,110 @@ class SumoManager(QMainWindow):
             self.show_message('info', 'Successfuly loaded WiFi networks')
             self.wifi_select.setStyleSheet('background-color: #2d3252;')
         elif isinstance(data, str):
-            self.serial_image.setPixmap(QPixmap(USB_CONNECTED_IMG))
+            self.serial_image.setPixmap(QPixmap(USB_CON_IMG))
             self.show_message('warning', 'Loading Wifi netwroks...')
         else:
             self.connected_port = None
-            self.serial_image.setPixmap(QPixmap(USB_IMG))
+            self.serial_image.setPixmap(QPixmap(USB_DCON_IMG))
             self.show_message('warning', 'Please connect your SumoRobot')
 
-    @pyqtSlot(str, str, str, str)
-    def show_dialog(self, title, message, details, image):
+    @pyqtSlot(str, str, str)
+    def show_dialog(self, title, message, details):
         msg_box = QMessageBox()
-        msg_box.setText(title)
         msg_box.setDetailedText(details)
         msg_box.setWindowTitle('Message')
         msg_box.setTextFormat(Qt.RichText)
-        msg_box.setInformativeText(message)
+        msg_box.setIcon(QMessageBox.Information)
         msg_box.setStandardButtons(QMessageBox.Ok)
-        # Set messagebox icon
-        if image:
-            pixmap = QPixmap(image).scaledToWidth(150)
-            msg_box.setIconPixmap(pixmap)
-        else:
-            msg_box.setIcon(QMessageBox.Information)
+        msg_box.setText("<font face=Orbitron>" + title + "</font>")
+        msg_box.setInformativeText("<font size=4>" + message + "</font>")
         msg_box.exec_()
 
+    # When mouse clicked clear the focus on the input fields
+    def mousePressEvent(self, event):
+        # When the status bar is pressed
+        self.wifi_pwd_edit.clearFocus()
+
+    # Button clicked event
+    def button_clicked(self):
+        # When some thread is already processing SumoRobot is not connected
+        if self.processing or not self.connected_port:
+            return
+
+        # When the network name is not valid
+        if self.wifi_select.currentText() == 'Network name':
+            # Show the error
+            self.wifi_select.setStyleSheet('background-color: #d9534f;')
+            return
+        else: # When the network name is valid, remove the error
+            self.wifi_select.setStyleSheet('background-color: #2d3252;')
+
+        # Indicates a background thread process
+        self.processing = "update_networks"
+
     def update_firmware(self, event):
-        # When SumoRobot is connected and update config is not running
-        if window.connected_port and not window.update_config:
+        # When SumoRobot is connected and update config nor update firmware is running
+        if self.connected_port and not self.processing:
             # Start the update firmware process
-            self.update_firmware = True
+            self.processing = "update_firmware"
+
+    def show_config(self, event):
+        if self.connected_port and not self.processing:
+            self.show_dialog('Config file',
+                'Click Show Details... to see the SumoRobot config file contents',
+                json.dumps(self.config, indent=8), None)
+
+    def update_id(self, event):
+        if self.connected_port and not self.processing:
+            # Start the update ID process
+            self.processing = "update_id"
+
+class UpdateID(QThread):
+    def run(self):
+        while True:
+            # Wait until update ID process is triggered
+            if window.processing != "update_id":
+                time.sleep(1)
+                continue
+
+            window.message.emit('warning', 'Updating SumoID...')
+            try:
+                # Generate a random robot ID
+                random = ''.join(secrets.choice(string.printable) for i in range(8))
+                window.config['sumo_id'] = random
+                # Save the random ID on the SumoRobot
+                board = Files(Pyboard(window.connected_port, rawdelay=0.5))
+                temp = json.dumps(window.config, indent=8)
+                board.put('config.json', temp)
+                board.close()
+                window.message.emit('info', 'Successfully updated SumoID')
+                window.dialog.emit('New SumoID',
+                    'Click Show Details... to see your new SumoID. Keep it secret and ' +
+                    'change it when it has been exposed.', random)
+            except:
+                # Close the serial port
+                board.close()
+                window.dialog.emit('Error updating SumoID',
+                    '* Try reconnecting the SumoRobot USB cable<br>' +
+                    '* Try updating SumoID again', traceback.format_exc())
+                window.message.emit('error', 'Error updating SumoID')
+
+            # Indicate that no process is running
+            window.processing = None
+
 
 class UpdateFirmware(QThread):
     def run(self):
         while True:
-            # Wait until update firmware is triggered
-            if not window.update_firmware:
+            # Wait until update firmware process is triggered
+            if window.processing != "update_firmware":
                 time.sleep(1)
                 continue
 
             window.message.emit('warning', 'Updating firmware...')
             try:
+                esp = None
+                board = None
                 # Open and parse the MicroPython URL
                 response = urllib.request.urlopen(MICROPYTHON_URL)
                 line = response.readline()
@@ -253,20 +300,33 @@ class UpdateFirmware(QThread):
                 temp_file.flush()
 
                 # Firmware files to update
-                file_names = ['uwebsockets.py', 'config.json', 'hal.py', 'main.py', 'boot.py']
-                data = dict.fromkeys(file_names)
+                data = dict.fromkeys(FIRMWARE_FILE_NAMES)
 
-                for file in file_names:
-                    window.message.emit('warning', 'Downloading firmware... ' + file)
+                # Download all firmware files
+                for file_name in FIRMWARE_FILE_NAMES:
+                    window.message.emit('warning', 'Downloading firmware... ' + file_name)
                     # Fetch the file from the Internet
-                    response = urllib.request.urlopen(SUMOFIRMWARE_URL + file)
-                    data[file] = response.read()
+                    response = urllib.request.urlopen(SUMOFIRMWARE_URL + file_name)
+                    data[file_name] = response.read()
+
+                # In case the user has a personalized config file
+                if window.config:
+                    # Use that instead of the downloaded one
+                    data['config.json'] = json.dumps(window.config, indent=8)
+                # In case it's the default config file
+                else:
+                    # Generate a random robot ID
+                    random = ''.join(secrets.choice(string.printable) for i in range(8))
+                    window.config = json.loads(data['config.json'])
+                    window.config['sumo_id'] = random
+                    data['config.json'] = json.dumps(window.config, indent=8)
 
                 esp = ESPLoader.detect_chip(window.connected_port)
                 esp.run_stub()
                 esp.IS_STUB = True
                 esp.change_baud(460800)
                 esp.STATUS_BYTES_LENGTH = 2
+                erase_flash(esp, None)
                 esp.flash_set_parameters(flash_size_bytes('4MB'))
                 esp.FLASH_WRITE_SIZE = 0x4000
                 esp.ESP_FLASH_DEFL_BEGIN = 0x10
@@ -287,35 +347,37 @@ class UpdateFirmware(QThread):
                 board = Files(Pyboard(window.connected_port, rawdelay=0.5))
 
                 # Go trough all the files
-                for file in file_names:
-                    window.message.emit('warning', 'Uploading firmware... ' + file)
+                for file_name in FIRMWARE_FILE_NAMES:
+                    window.message.emit('warning', 'Uploading firmware... ' + file_name)
                     # Update file
-                    board.put(file, data[file])
+                    board.put(file_name, data[file_name])
 
                 # Close serial port
                 board.close()
                 window.message.emit('info', 'Successfully updated firmware')
                 # Try to laod WiFi networks again
-                window.connected_port = None;
+                window.connected_port = None
             except:
-                # Close the serial port
-                esp._port.close()
-                board.close()
+                # Close the serial ports if open
+                if esp:
+                    esp._port.close()
+                if board:
+                    board.close()
                 window.dialog.emit('Error updating firmware',
-                    '* Try reconnecting the SumoRobot\n' +
-                    '* Check your Internet connection\n', +
+                    '* Try reconnecting the SumoRobot USB cable<br>' +
+                    '* Check your Internet connection<br>' +
                     '* Finally try updating firmware again',
-                    traceback.format_exc(), None)
+                    traceback.format_exc())
                 window.message.emit('error', 'Error updating firmware')
 
-            # Stop the update thread
-            window.update_firmware = False
+            # Indicate that no process is running
+            window.processing = None
 
-class UpdateConfig(QThread):
+class UpdateNetworks(QThread):
     def run(self):
         while True:
-            # Wait until update config is triggered
-            if not window.update_config:
+            # Wait until update networks process is triggered
+            if window.processing != "update_networks":
                 time.sleep(1)
                 continue
 
@@ -326,14 +388,12 @@ class UpdateConfig(QThread):
                 pwd = window.wifi_pwd_edit.text()
                 # Open the serial port
                 board = Files(Pyboard(window.connected_port, rawdelay=0.5))
-                # Try to read and parse config file
-                config = json.loads(board.get('config.json'))
                 # Add the WiFi credentials
-                config['wifis'][ssid] = pwd
+                window.config['wifis'][ssid] = pwd
                 # Convert the json object into a string
-                config = json.dumps(config, indent = 8)
+                temp = json.dumps(window.config, indent = 8)
                 # Write the updates config file
-                board.put('config.json', config)
+                board.put('config.json', temp)
                 # Close the serial connection
                 board.close()
                 # Initiate another connection to reset the board
@@ -343,22 +403,28 @@ class UpdateConfig(QThread):
                 window.message.emit('info', 'Successfully added WiFi credentials')
                 window.dialog.emit('Successfully added WiFi credentials',
                     '<p>Now turn the robot on and remove the USB cable. Wait for ' +
-                    'the blue LED under the robot to be steady on and head ' +
-                    'over to the SumoRobot programming interface:</p>' +
-                    '<a href="http://sumo.robokoding.com">sumo.robokoding.com</a>',
-                    '', BLUE_LED_IMG)
+                    'the blue LED under the robot to be steady ON (SumoRobot is ' +
+                    'successfully connected to the server). To see your SumoID ' +
+                    'click Show Details... Keep the SumoID secret and change it ' +
+                    'when exposed, from File > Update SumoID. Now you can head' +
+                    'over to the SumoInterface:</p>' +
+                    '<a href="http://sumo.robokoding.com">sumo.robokoding.com</a>' +
+                    '<p>For further info about the SumoInterface head over to:</p>' +
+                    '<a href="https://wwww.robokoding.com/kits/sumorobot/sumointerface"' +
+                    '>wwww.robokoding.com/kits/sumorobot/sumointerface</a>',
+                    window.config['sumo_id'])
             except:
                 # Close the serial connection
                 board.close()
                 window.dialog.emit('Error adding WiFi credentials',
-                    '* Try reconnecting the SumoRobot\n' +
-                    '* Try adding WiFi credentials again\n', +
+                    '* Try reconnecting the SumoRobot USB cable<br>' +
+                    '* Try adding WiFi credentials again<br>', +
                     '* When nothing helped, try File > Update Firmware',
-                    traceback.format_exc(), None)
+                    traceback.format_exc())
                 window.message.emit('error', 'Error adding WiFi credentials')
 
-            # Enable the WiFi add button
-            window.update_config = False
+            # Indicate that no process is running
+            window.processing = None
 
 class PortUpdate(QThread):
     # To update serialport status
@@ -384,6 +450,10 @@ class PortUpdate(QThread):
                     board = Files(Pyboard(port, rawdelay=0.5))
                     # Get the Wifi networks in range
                     networks = board.get_networks()
+                    # Delay before next read
+                    time.sleep(0.5)
+                    # Get the config file
+                    window.config = json.loads(board.get('config.json'))
                     # Close the serial connection
                     board.close()
                     # Emit a signal to populate networks
@@ -392,9 +462,9 @@ class PortUpdate(QThread):
                     # Close the serial connection
                     board.close()
                     window.dialog.emit('Error loading WiFi networks',
-                        '* Try reconnecting the SumoRobot\n' +
+                        '* Try reconnecting the SumoRobot USB cable<br>' +
                         '* Try updating firmware File > Update Firmware (close this dialog first)',
-                        traceback.format_exc(), None)
+                        traceback.format_exc())
                     window.message.emit('error', 'Error loading WiFi networks')
 
                 window.connected_port = port
@@ -424,12 +494,16 @@ if __name__ == '__main__':
     port_update.start()
 
     # Start the update config thread
-    update_config = UpdateConfig()
-    update_config.start()
+    update_networks = UpdateNetworks()
+    update_networks.start()
 
     # Start the update firmware thread
     update_firmware = UpdateFirmware()
     update_firmware.start()
+
+    # Start update ID thread
+    update_id = UpdateID()
+    update_id.start()
 
     # Launch application
     sys.exit(app.exec_())
