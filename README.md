@@ -21,8 +21,7 @@
 2. Wait for WiFi networks to load
 3. From program menu go File > Update Firmware
 
-support
-=======
+## Support
 If you find our work useful, please consider donating : )  
 [![Donate using Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/robokoding/donate)  
 
