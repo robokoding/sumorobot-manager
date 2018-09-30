@@ -152,7 +152,8 @@ class Pyboard:
                 print('')
 
     def close(self):
-        self.serial.close()
+        if self.serial.isOpen():
+            self.serial.close()
 
     def read_until(self, min_num_bytes, ending, timeout=10, data_consumer=None):
         data = self.serial.read(min_num_bytes)
@@ -168,6 +169,9 @@ class Pyboard:
                 if data_consumer:
                     data_consumer(new_data)
                 timeout_count = 0
+                # If some random data is coming, stop reading
+                if len(data) > 500:
+                    break
             else:
                 timeout_count += 1
                 if timeout is not None and timeout_count >= 100 * timeout:

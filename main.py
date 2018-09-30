@@ -9,7 +9,7 @@ RoboKoding SumoRobots.
 
 Author: RoboKoding LTD
 Website: https://www.robokoding.com
-Contact: info@robokoding.com
+Contact: support@robokoding.com
 """
 
 # python imports
@@ -35,7 +35,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
 # App name
-APP_NAME = 'SumoManager v0.6'
+APP_NAME = 'SumoManager v0.6.1'
 
 # Firmware URLs, file names
 MICROPYTHON_URL = 'http://micropython.org/download'
@@ -121,14 +121,14 @@ class SumoManager(QMainWindow):
         # Add menubar items
         menubar = self.menuBar()
         file_menu = menubar.addMenu('File')
-        # Show config menu item
-        show_config = QAction('Show SumoConfig', self)
-        show_config.triggered.connect(self.show_config)
-        file_menu.addAction(show_config)
         # Update robot ID menu item
         update_id = QAction('Update SumoID', self)
         update_id.triggered.connect(self.update_id)
         file_menu.addAction(update_id)
+        # Show config menu item
+        show_config = QAction('Show SumoConfig', self)
+        show_config.triggered.connect(self.show_config)
+        file_menu.addAction(show_config)
         # Update firmware menu item
         update_firmware = QAction('Update SumoFirmware', self)
         update_firmware.triggered.connect(self.update_firmware)
@@ -190,9 +190,12 @@ class SumoManager(QMainWindow):
         msg_box.setWindowTitle('Message')
         msg_box.setTextFormat(Qt.RichText)
         msg_box.setIcon(QMessageBox.Information)
-        msg_box.setStandardButtons(QMessageBox.Ok)
+        msg_box.setStandardButtons(QMessageBox.Close)
         msg_box.setText("<font face=Orbitron>" + title + "</font>")
         msg_box.setInformativeText("<font size=4>" + message + "</font>")
+        horizontalSpacer = QSpacerItem(500, 0, QSizePolicy.Minimum, QSizePolicy.Expanding);
+        layout = msg_box.layout();
+        layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount());
         msg_box.exec_()
 
     # When mouse clicked clear the focus on the input fields
@@ -214,6 +217,8 @@ class SumoManager(QMainWindow):
         else: # When the network name is valid, remove the error
             self.wifi_select.setStyleSheet('background-color: #2d3252;')
 
+        # To lose focus on the text edit field
+        self.setFocus()
         # Indicates a background thread process
         self.processing = "update_networks"
 
@@ -244,11 +249,12 @@ class UpdateID(QThread):
 
             window.message.emit('warning', 'Updating SumoID...')
             try:
-                # Generate a random robot ID
-                random = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(8))
-                window.config['sumo_id'] = random
                 # Save the random ID on the SumoRobot
                 board = Files(Pyboard(window.connected_port, rawdelay=0.5))
+                # Generate a new random robot ID
+                random = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(8))
+                window.config['sumo_id'] = random
+                # Save the robot ID
                 temp = json.dumps(window.config, indent=8)
                 board.put('config.json', temp)
                 board.close()
@@ -389,11 +395,11 @@ class UpdateNetworks(QThread):
 
             window.message.emit('warning', 'Adding WiFi credentials...')
             try:
+                # Open the serial port
+                board = Files(Pyboard(window.connected_port, rawdelay=0.5))
                 # Get the text from the input fields
                 ssid = window.wifi_select.currentText()
                 pwd = window.wifi_pwd_edit.text()
-                # Open the serial port
-                board = Files(Pyboard(window.connected_port, rawdelay=0.5))
                 # Add the WiFi credentials
                 window.config['wifis'][ssid] = pwd
                 # Convert the json object into a string
@@ -459,7 +465,8 @@ class PortUpdate(QThread):
                     # Delay before next read
                     time.sleep(0.5)
                     # Get the config file
-                    window.config = json.loads(board.get('config.json'))
+                    if not window.config:
+                        window.config = json.loads(board.get('config.json'))
                     # Close the serial connection
                     board.close()
                     # Emit a signal to populate networks
