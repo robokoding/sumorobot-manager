@@ -278,6 +278,7 @@ class Files(object):
             for network in networks:
                 ssid = network[0].decode('utf-8')
                 sys.stdout.write(ssid + '&')
+            sys.stdout.write(str(Pin(25, Pin.IN).value()))
         """
         self._pyboard.enter_raw_repl()
         try:
@@ -288,8 +289,8 @@ class Files(object):
             if '\n' in out:
                 out = out.split('\n')[-1]
             # Split the networks into a list
-            out = out.split('&')[:-1]
+            out = out.split('&')
         except PyboardError as ex:
             raise ex
         self._pyboard.exit_raw_repl()
-        return out
+        return out[:-1], out[-1]
