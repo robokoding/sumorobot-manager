@@ -170,7 +170,7 @@ class Pyboard:
                     data_consumer(new_data)
                 timeout_count = 0
                 # If some random data is coming, stop reading
-                if len(data) > 500:
+                if len(data) > 1000:
                     break
             else:
                 timeout_count += 1
