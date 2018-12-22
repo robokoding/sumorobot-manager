@@ -3,6 +3,10 @@ QWidget {
     background-color: #242943;
 }
 
+QLabel::a {
+    color:white;border-bottom: dotted 1px;text-decoration: none;
+}
+
 QLabel {
     color: white;
     font-family: Orbitron;
@@ -15,7 +19,9 @@ QPixmap {
 
 QPushButton {
     height: 2em;
-    margin-bottom: 20px;
+    padding-top: 2px;
+    padding-left: 5px;
+    padding-right: 5px;
     font-family: Orbitron;
     border: 2px solid white;
     background: transparent;
