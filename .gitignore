@@ -5,6 +5,7 @@
 .DS_Store
 
 # Compiled binaries
+*.spec
 build/
 dist/
 
