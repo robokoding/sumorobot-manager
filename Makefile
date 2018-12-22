@@ -1,5 +1,5 @@
 linux:
-	pyinstaller main.py --onefile --name SumoManager --add-data res:res
+	pyinstaller main.py --onefile --name sumomanager --add-data res:res
 windows:
 	pyinstaller main.py --onefile --name SumoManager --windowed --icon res\sumologo.ico --add-data res;res
 macos:
