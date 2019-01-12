@@ -130,10 +130,11 @@ class Pyboard:
             delayed = False
             for attempt in range(wait + 1):
                 try:
-                    self.serial = serial.Serial(device, baudrate=baudrate, timeout=3, interCharTimeout=1)
-                    # Reset the device
+                    self.serial = serial.Serial(device, baudrate=baudrate, interCharTimeout=1)
+                    # MODIFY: Reset the device
                     self.serial.setDTR(False)
                     self.serial.setRTS(False)
+                    self._data = None
                     break
                 except (OSError, IOError): # Py2 and Py3 have different errors
                     if wait == 0:
@@ -152,8 +153,7 @@ class Pyboard:
                 print('')
 
     def close(self):
-        if self.serial.isOpen():
-            self.serial.close()
+        self.serial.close()
 
     def read_until(self, min_num_bytes, ending, timeout=10, data_consumer=None):
         data = self.serial.read(min_num_bytes)
@@ -169,7 +169,7 @@ class Pyboard:
                 if data_consumer:
                     data_consumer(new_data)
                 timeout_count = 0
-                # If some random data is coming, stop reading
+                # MODIFY: If some random data is coming, stop reading
                 if len(data) > 1000:
                     break
             else:
@@ -185,20 +185,24 @@ class Pyboard:
             time.sleep(_rawdelay)
 
         self.serial.write(b'\r\x03\x03') # ctrl-C twice: interrupt any running program
+
         # flush input (without relying on serial.flushInput())
         n = self.serial.inWaiting()
         while n > 0:
             self.serial.read(n)
             n = self.serial.inWaiting()
+
         self.serial.write(b'\r\x01') # ctrl-A: enter raw REPL
         data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n>')
         if not data.endswith(b'raw REPL; CTRL-B to exit\r\n>'):
+            self._data = data
             print(data)
             raise PyboardError('could not enter raw repl')
 
         self.serial.write(b'\x04') # ctrl-D: soft reset
         data = self.read_until(1, b'soft reboot\r\n')
         if not data.endswith(b'soft reboot\r\n'):
+            self._data = data
             print(data)
             raise PyboardError('could not enter raw repl')
         # By splitting this into 2 reads, it allows boot.py to print stuff,
