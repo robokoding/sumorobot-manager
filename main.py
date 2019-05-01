@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 """
@@ -291,6 +291,7 @@ class UpdateServer(QThread):
                     '* Try updating SumoServer again', traceback.format_exc())
                 window.message.emit('error', 'Error updating SumoServer')
 
+            # Try to close the serial connection
             try:
                 board.close()
             except:
@@ -324,6 +325,7 @@ class UpdateID(QThread):
                     '* Try updating SumoID again', traceback.format_exc())
                 window.message.emit('error', 'Error updating SumoID')
 
+            # Try to close the serial connection
             try:
                 board.close()
             except:
@@ -400,6 +402,7 @@ class UpdateFirmware(QThread):
                     verify=False,
                     compress=None,
                     no_stub=False,
+                    erase_all=False,
                     flash_mode='dio',
                     flash_size='4MB',
                     flash_freq='keep',
@@ -450,6 +453,7 @@ class UpdateFirmware(QThread):
                     traceback.format_exc())
                 window.message.emit('error', 'Error updating SumoFirmware')
 
+            # Try to close the serial connection
             try:
                 board.close()
                 esp._port.close()
@@ -482,25 +486,27 @@ class UpdateNetworks(QThread):
                 board.put('config.json', temp)
                 window.message.emit('info', 'Successfully added WiFi credentials')
                 window.dialog.emit('Successfully added WiFi credentials',
-                    '<p>Now turn the SumoRobot ON and remove the USB cable. Wait for ' +
-                    'the blue LED under the robot to be steady ON (SumoRobot is ' +
+                    '<p>Now you can remove the USB cable. Wait for ' +
+                    'the blue LED under the robot to be steady ON (means: SumoRobot is ' +
                     'successfully connected to the server). To see your SumoID ' +
-                    'click Show Details... Keep the SumoID secret and change it ' +
-                    'when exposed, from File > Advanced > Update SumoID. Now you can head' +
+                    'click Show Details... Keep in mind that other people can access your ' +
+                    'SumoRobot with the SumoID. You can change it any time under ' +
+                    'File > Advanced > Update SumoID. Now you can head' +
                     'over to the SumoInterface:</p>' +
                     '<a style="color:white;cursor:pointer;" href="http://sumo.robokoding.com">sumo.robokoding.com</a>' +
                     '<p>For further info about the SumoInterface head over to:</p>' +
                     '<a style="color:white;cursor:pointer;" href="https://wwww.robokoding.com/kits/sumorobot/sumointerface"' +
-                    '>wwww.robokoding.com/kits/sumorobot/sumointerface</a>',
+                    '>www.robokoding.com/kits/sumorobot/sumointerface</a>',
                     window.config['sumo_id'])
             except:
                 window.dialog.emit('Error adding WiFi credentials',
-                    '* Try reconnecting the SumoRobot USB cable<br>' +
                     '* Try adding WiFi credentials again<br>', +
-                    '* When nothing helped, try File > Update SumoFirmware (close this dialog first)',
+                    '* Try reconnecting the SumoRobot USB cable<br>' +
+                    '* Finally try File > Update SumoFirmware (close this dialog first)',
                     traceback.format_exc())
                 window.message.emit('error', 'Error adding WiFi credentials')
 
+            # Try to close the serial connection
             try:
                 board.close()
             except:
@@ -537,9 +543,21 @@ class PortUpdate(QThread):
                 # Silicon Lab CP2104 IC
                 elif '10C4:' in hwid:
                     window.status_led_pin = 5
+                    print("PortUpdate: Detected SumoBoard v0.1.X")
 
                 window.usb_con.emit(port)
                 try:
+                    board = None
+                    # Open a serial connection with the esptool
+                    esp = ESPLoader.detect_chip(port)
+                    # Change status led pin for SumoBoard v0.3.X
+                    if "VRef calibration in efuse" in esp.get_chip_features():
+                        print("PortUpdate: Detected SumoRobot STATUS LED on pin 5")
+                        window.status_led_pin = 5
+                    # Close the serial connection
+                    esp._port.close()
+                    # Delay before next read
+                    time.sleep(0.5)
                     # Initiate a serial connection
                     board = Files(Pyboard(port))
                     # Get the Wifi networks in range
@@ -548,19 +566,28 @@ class PortUpdate(QThread):
                     time.sleep(0.5)
                     # When the config file is present, load it
                     if any('config.json' in file for file in board.ls()):
+                        print("PortUpdate: Loading SumoConfig (config.json) file")
                         window.config = json.loads(board.get('config.json'))
                     # Otherwise when no config file present, update the firmware
                     else:
+                        print("PortUpdate: Sarting Update Firmware process")
                         window.processing = 'update_firmware'
                     # Emit a signal to populate networks
                     window.usb_list.emit(networks)
                 except:
-                    window.dialog.emit('Error loading WiFi networks',
-                        '* Try reconnecting the SumoRobot USB cable<br>' +
-                        '* When nothing helped try File > Update SumoFirmware (close this dialog first)',
-                        traceback.format_exc())
-                    window.message.emit('error', 'Error loading WiFi networks')
+                    # If board had boot problems, reflash the SumoFirmware
+                    if board and board._pyboard._data and b"flash read err" in board._pyboard._data:
+                        print("PortUpdate: Boot problem, reflashing SumoFirmware")
+                        window.processing = 'update_firmware'
+                    # Otherwise show error as normal
+                    else:
+                        window.dialog.emit('Error loading WiFi networks',
+                            '* Try reconnecting the SumoRobot USB cable<br>' +
+                            '* When nothing helped try File > Update SumoFirmware (close this dialog first)',
+                            traceback.format_exc())
+                        window.message.emit('error', 'Error loading WiFi networks')
 
+                # Try to close the serial connection
                 try:
                     board.close()
                 except:
