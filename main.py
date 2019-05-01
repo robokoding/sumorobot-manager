@@ -35,8 +35,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
 # App versioning
-APP_VERSION = '0.7.2'
-APP_TIMESTAMP = '2019.04.07 14:41:00'
+APP_VERSION = '0.7.3'
+APP_TIMESTAMP = '2019.05.01 22:20:00'
 
 # App name
 APP_NAME = 'SumoManager v' + APP_VERSION
@@ -387,7 +387,8 @@ class UpdateFirmware(QThread):
                     window.status_led_pin = 5
                     print("main.py: UpdateFirmware() ESP features", features)
 
-                # Flash the latest MicroPython
+                # Erase the flash memory
+                window.message.emit('warning', 'Erasing flash memory...')
                 esp.run_stub()
                 esp.IS_STUB = True
                 esp.change_baud(460800)
@@ -396,7 +397,8 @@ class UpdateFirmware(QThread):
                 esp.flash_set_parameters(flash_size_bytes('4MB'))
                 esp.FLASH_WRITE_SIZE = 0x4000
                 esp.ESP_FLASH_DEFL_BEGIN = 0x10
-                window.message.emit('warning', 'Uploading SumoFirmware... esp32.bin')
+                # Flash the latest MicroPython
+                window.message.emit('warning', 'Flashing SumoFirmware... esp32.bin')
                 write_flash(esp, argparse.Namespace(
                     addr_filename=[(4096, open(temp_file.fileName(), 'rb'))],
                     verify=False,
@@ -438,7 +440,7 @@ class UpdateFirmware(QThread):
 
                 # Go trough all the files
                 for file_name in FIRMWARE_FILE_NAMES:
-                    window.message.emit('warning', 'Uploading SumoFirmware... ' + file_name)
+                    window.message.emit('warning', 'Flashing SumoFirmware... ' + file_name)
                     # Update file
                     board.put(file_name, data[file_name])
 
@@ -548,16 +550,6 @@ class PortUpdate(QThread):
                 window.usb_con.emit(port)
                 try:
                     board = None
-                    # Open a serial connection with the esptool
-                    esp = ESPLoader.detect_chip(port)
-                    # Change status led pin for SumoBoard v0.3.X
-                    if "VRef calibration in efuse" in esp.get_chip_features():
-                        print("PortUpdate: Detected SumoRobot STATUS LED on pin 5")
-                        window.status_led_pin = 5
-                    # Close the serial connection
-                    esp._port.close()
-                    # Delay before next read
-                    time.sleep(0.5)
                     # Initiate a serial connection
                     board = Files(Pyboard(port))
                     # Get the Wifi networks in range
