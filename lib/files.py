@@ -268,6 +268,7 @@ class Files(object):
         # Be careful not to overload the UART buffer so only write
         # a few bytes at a time, and don't use print since it adds newlines and
         # expects string data.
+        print("files.py: get_networks() called")
         command = """
             import sys
             import network
@@ -293,4 +294,5 @@ class Files(object):
         except PyboardError as ex:
             raise ex
         self._pyboard.exit_raw_repl()
+        # Return WiFi names and USB connection status
         return out[:-1], out[-1]
