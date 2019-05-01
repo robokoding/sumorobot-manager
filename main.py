@@ -34,8 +34,16 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
+# App versioning
+APP_VERSION = '0.7.2'
+APP_TIMESTAMP = '2019.04.07 14:41:00'
+
 # App name
-APP_NAME = 'SumoManager v0.7'
+APP_NAME = 'SumoManager v' + APP_VERSION
+
+# Ignore SSL
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 # Firmware URLs, file names
 MICROPYTHON_URL = 'http://micropython.org/download'
@@ -65,7 +73,6 @@ class SumoManager(QMainWindow):
         self.initUI()
 
         self.config = None
-        self.raw_delay = 0
         self.processing = None
         self.status_led_pin = 0
         self.connected_port = None
@@ -273,14 +280,10 @@ class UpdateServer(QThread):
             window.message.emit('warning', 'Updating SumoServer...')
             try:
                 # Open a connection
-                board = Files(Pyboard(window.connected_port, rawdelay=window.raw_delay))
+                board = Files(Pyboard(window.connected_port))
                 # Save the new SumoServer
                 temp = json.dumps(window.config, indent=8)
                 board.put('config.json', temp)
-                board.close()
-                # Initiate another connection to reset the board
-                # TODO: implement more elegantly
-                board = Files(Pyboard(window.connected_port, rawdelay=window.raw_delay))
                 window.message.emit('info', 'Successfully updated SumoServer')
             except:
                 window.dialog.emit('Error updating SumoServer',
@@ -307,14 +310,10 @@ class UpdateID(QThread):
             window.message.emit('warning', 'Updating SumoID...')
             try:
                 # Open a connection
-                board = Files(Pyboard(window.connected_port, rawdelay=window.raw_delay))
+                board = Files(Pyboard(window.connected_port))
                 # Save the new SumoID
                 temp = json.dumps(window.config, indent=8)
                 board.put('config.json', temp)
-                board.close()
-                # Initiate another connection to reset the board
-                # TODO: implement more elegantly
-                board = Files(Pyboard(window.connected_port, rawdelay=window.raw_delay))
                 window.message.emit('info', 'Successfully updated SumoID')
                 window.dialog.emit('New SumoID',
                     'Click Show Details... to see your new SumoID. Keep it secret and ' +
@@ -376,27 +375,17 @@ class UpdateFirmware(QThread):
                     response = urllib.request.urlopen(SUMOFIRMWARE_URL + file_name)
                     data[file_name] = response.read()
 
-                # In case the user has a personalized config file
-                if window.config:
-                    # Transfer the personalized values
-                    tmp_config = json.loads(data['config.json'])
-                    tmp_config['wifis'] = window.config['wifis']
-                    tmp_config['sumo_id'] = window.config['sumo_id']
-                    tmp_config['sumo_server'] = window.config['sumo_server']
-                    tmp_config['status_led_pin'] = window.config['status_led_pin']
-                    tmp_config['ultrasonic_distance'] = window.config['ultrasonic_distance']
-                    data['config.json'] = json.dumps(tmp_config, indent=8)
-                # In case it's the default config file
-                else:
-                    # Generate a random robot ID
-                    random = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(8))
-                    window.config = json.loads(data['config.json'])
-                    window.config['sumo_id'] = random
-                    window.config['status_led_pin'] = window.status_led_pin
-                    data['config.json'] = json.dumps(window.config, indent=8)
-
-                # flash the ESP
+                # Detect the ESP version
                 esp = ESPLoader.detect_chip(window.connected_port)
+
+                # Check for ESP silicon features
+                features = esp.get_chip_features()
+                if ('VRef calibration in efuse' in features):
+                    # Determine the status LED pin
+                    window.status_led_pin = 5
+                    print("main.py: UpdateFirmware() ESP features", features)
+
+                # Flash the latest MicroPython
                 esp.run_stub()
                 esp.IS_STUB = True
                 esp.change_baud(460800)
@@ -418,8 +407,31 @@ class UpdateFirmware(QThread):
                 esp.hard_reset()
                 esp._port.close()
 
+                # In case the user has a personalized config file
+                if window.config:
+                    # Transfer the personalized values
+                    tmp_config = json.loads(data['config.json'])
+                    tmp_config['wifis'] = window.config['wifis']
+                    tmp_config['sumo_id'] = window.config['sumo_id']
+                    tmp_config['status_led_pin'] = window.status_led_pin
+                    tmp_config['sumo_server'] = window.config['sumo_server']
+                    tmp_config['ultrasonic_distance'] = window.config['ultrasonic_distance']
+                    tmp_config['left_line_value'] = window.config['left_line_value']
+                    tmp_config['right_line_value'] = window.config['right_line_value']
+                    tmp_config['left_line_threshold'] = window.config['left_line_threshold']
+                    tmp_config['right_line_threshold'] = window.config['right_line_threshold']
+                    data['config.json'] = json.dumps(tmp_config, indent=8)
+                # In case it's the default config file
+                else:
+                    # Generate a random robot ID
+                    random = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(8))
+                    window.config = json.loads(data['config.json'])
+                    window.config['sumo_id'] = random
+                    window.config['status_led_pin'] = window.status_led_pin
+                    data['config.json'] = json.dumps(window.config, indent=8)
+
                 # Open the serial port
-                board = Files(Pyboard(window.connected_port, rawdelay=window.raw_delay))
+                board = Files(Pyboard(window.connected_port))
 
                 # Go trough all the files
                 for file_name in FIRMWARE_FILE_NAMES:
@@ -458,7 +470,7 @@ class UpdateNetworks(QThread):
             window.message.emit('warning', 'Adding WiFi credentials...')
             try:
                 # Open the serial port
-                board = Files(Pyboard(window.connected_port, rawdelay=window.raw_delay))
+                board = Files(Pyboard(window.connected_port))
                 # Get the text from the input fields
                 ssid = window.wifi_select.currentText()
                 pwd = window.wifi_pwd_edit.text()
@@ -468,11 +480,6 @@ class UpdateNetworks(QThread):
                 temp = json.dumps(window.config, indent = 8)
                 # Write the updates config file
                 board.put('config.json', temp)
-                # Close the serial connection
-                board.close()
-                # Initiate another connection to reset the board
-                # TODO: implement more elegantly
-                board = Files(Pyboard(window.connected_port, rawdelay=window.raw_delay))
                 window.message.emit('info', 'Successfully added WiFi credentials')
                 window.dialog.emit('Successfully added WiFi credentials',
                     '<p>Now turn the SumoRobot ON and remove the USB cable. Wait for ' +
@@ -522,23 +529,21 @@ class PortUpdate(QThread):
 
             # When specific vendor ID was found and it's a new port
             if port and port != window.connected_port:
-                # Apply setting for different SumoRobot versions
+                # Different SumoRobot versions have a
+                # different USB to UART IC hardware ID
+                # Jiangsu Haoheng CH304 IC
                 if '1A86:' in hwid:
-                    window.raw_delay = 0.6
                     window.status_led_pin = 22
+                # Silicon Lab CP2104 IC
                 elif '10C4:' in hwid:
-                    window.raw_delay = 0.5
                     window.status_led_pin = 5
 
                 window.usb_con.emit(port)
                 try:
                     # Initiate a serial connection
-                    board = Files(Pyboard(port, rawdelay=window.raw_delay))
+                    board = Files(Pyboard(port))
                     # Get the Wifi networks in range
                     networks, usb_charge = board.get_networks()
-                    # change status led pin according to SumoBoard
-                    if int(usb_charge):
-                        window.status_led_pin = 5
                     # Delay before next read
                     time.sleep(0.5)
                     # When the config file is present, load it
