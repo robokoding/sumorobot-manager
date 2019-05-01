@@ -186,13 +186,13 @@ class Pyboard:
 
         # ctrl-C twice: interrupt any running program
         self.serial.write(b'\r\x03')
-        time.sleep(0.2)
+        time.sleep(0.3)
         self.serial.write(b'\r\x03')
-        time.sleep(0.2)
+        time.sleep(0.3)
         self.serial.write(b'\r\x03')
-        time.sleep(0.2)
+        time.sleep(0.3)
         self.serial.write(b'\r\x03')
-        time.sleep(0.5)
+        time.sleep(0.3)
 
         # flush input (without relying on serial.flushInput())
         n = self.serial.inWaiting()
