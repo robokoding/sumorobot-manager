@@ -497,7 +497,7 @@ class UpdateNetworks(QThread):
                     'over to the SumoInterface:</p>' +
                     '<a style="color:white;cursor:pointer;" href="http://sumo.robokoding.com">sumo.robokoding.com</a>' +
                     '<p>For further info about the SumoInterface head over to:</p>' +
-                    '<a style="color:white;cursor:pointer;" href="https://wwww.robokoding.com/kits/sumorobot/sumointerface"' +
+                    '<a style="color:white;cursor:pointer;" href="https://www.robokoding.com/kits/sumorobot/sumointerface"' +
                     '>www.robokoding.com/kits/sumorobot/sumointerface</a>',
                     window.config['sumo_id'])
             except:
