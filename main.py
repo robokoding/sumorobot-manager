@@ -9,7 +9,7 @@ RoboKoding SumoRobots.
 
 Author: RoboKoding LTD
 Website: https://www.robokoding.com
-Contact: support@robokoding.com
+Contact: letstalk@robokoding.com
 """
 
 # python imports
@@ -35,8 +35,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
 # App versioning
-APP_VERSION = '0.7.3'
-APP_TIMESTAMP = '2019.05.01 22:20:00'
+APP_VERSION = '0.8.0'
+APP_TIMESTAMP = '2019.05.26 22:20:00'
 
 # App name
 APP_NAME = 'SumoManager v' + APP_VERSION
@@ -46,9 +46,11 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # Firmware URLs, file names
-MICROPYTHON_URL = 'http://micropython.org/download'
-FIRMWARE_FILE_NAMES = ['uwebsockets.py', 'config.json', 'hal.py', 'main.py', 'boot.py']
+FIRMWARE_FILE_NAMES = ['config.json']
+SUMOMANAGER_URL = 'https://github.com/robokoding/sumorobot-manager/releases/latest/'
 SUMOFIRMWARE_URL = 'https://raw.githubusercontent.com/robokoding/sumorobot-firmware/master/'
+SUMOFIRMWARE_VERSION_URL = 'https://github.com/robokoding/sumorobot-firmware/releases/latest/'
+MICROPYTHON_URL = 'https://github.com/robokoding/sumorobot-firmware/releases/latest/download/esp32-micropython-sumofirmware.bin'
 
 # Define the resource path
 RESOURCE_PATH = 'res'
@@ -130,6 +132,10 @@ class SumoManager(QMainWindow):
         # Add menubar items
         menubar = self.menuBar()
         file_menu = menubar.addMenu('File')
+        # App info item
+        app_info = QAction('App info', self)
+        app_info.triggered.connect(self.app_info)
+        file_menu.addAction(app_info)
         # Update robot ID menu item
         advanced_menu = QMenu('Advanced', self)
         file_menu.addMenu(advanced_menu)
@@ -239,6 +245,13 @@ class SumoManager(QMainWindow):
         # Indicates a background thread process
         self.processing = 'update_networks'
 
+    def app_info(self, event):
+        # Show app info dialog
+        self.show_dialog('App info', 'Version: ' + APP_VERSION + '<br>' +
+            'Timestamp: ' + APP_TIMESTAMP + '<br><br>' +
+            'This is the SumoManager app. You can manage various functions of ' +
+            'the SumoRobot with it. Please keep this app up to the date for the best possible experience.<br>', '')
+
     def update_firmware(self, event):
         # When SumoRobot is connected and update config nor update firmware is running
         if self.connected_port and not self.processing:
@@ -342,25 +355,10 @@ class UpdateFirmware(QThread):
                 time.sleep(1)
                 continue
 
-            window.message.emit('warning', 'Updating SumoFirmware...')
+            window.message.emit('warning', 'Downloading SumoFirmware... esp32.bin')
             try:
-                # Open and parse the MicroPython URL
-                response = urllib.request.urlopen(MICROPYTHON_URL)
-                line = response.readline()
-                while line:
-                    # Find the firmware binary URL
-                    if b'firmware/esp32' in line:
-                        firmware_url = line.split(b'"')[1].decode('utf-8')
-                        break
-                    line = response.readline()
-
-                window.message.emit('warning', 'Downloading SumoFirmware... esp32.bin')
-                # If not a complete URL
-                if 'http' not in firmware_url:
-                    # Complete the URL
-                    firmware_url = MICROPYTHON_URL[:-9] + firmware_url
                 # Open the parsed firmware binary URL
-                response = urllib.request.urlopen(firmware_url)
+                response = urllib.request.urlopen(MICROPYTHON_URL)
                 # Write the firmware binary into a local file
                 temp_file = QTemporaryFile()
                 temp_file.open()
@@ -412,6 +410,10 @@ class UpdateFirmware(QThread):
                 esp.hard_reset()
                 esp._port.close()
 
+                # Wait for the reboot
+                window.message.emit('warning', 'Waiting for reboot... ')
+                time.sleep(10)
+
                 # In case the user has a personalized config file
                 if window.config:
                     # Transfer the personalized values
@@ -445,8 +447,6 @@ class UpdateFirmware(QThread):
                     board.put(file_name, data[file_name])
 
                 window.message.emit('info', 'Successfully updated SumoFirmware')
-                # Try to laod WiFi networks again
-                window.connected_port = None
             except:
                 window.dialog.emit('Error updating SumoFirmware',
                     '* Check your Internet connection<br>' +
@@ -458,9 +458,18 @@ class UpdateFirmware(QThread):
             # Try to close the serial connection
             try:
                 board.close()
+            except:
+                pass
+
+            try:
                 esp._port.close()
             except:
                 pass
+
+            # When there was no config, means there was not firmware
+            if not window.config:
+                # Try to laod WiFi networks again, as it failed before
+                window.connected_port = None
 
             # Indicate that no process is running
             window.processing = None
@@ -497,7 +506,7 @@ class UpdateNetworks(QThread):
                     'over to the SumoInterface:</p>' +
                     '<a style="color:white;cursor:pointer;" href="http://sumo.robokoding.com">sumo.robokoding.com</a>' +
                     '<p>For further info about the SumoInterface head over to:</p>' +
-                    '<a style="color:white;cursor:pointer;" href="https://wwww.robokoding.com/kits/sumorobot/sumointerface"' +
+                    '<a style="color:white;cursor:pointer;" href="https://www.robokoding.com/kits/sumorobot/sumointerface"' +
                     '>www.robokoding.com/kits/sumorobot/sumointerface</a>',
                     window.config['sumo_id'])
             except:
@@ -560,6 +569,12 @@ class PortUpdate(QThread):
                     if any('config.json' in file for file in board.ls()):
                         print("PortUpdate: Loading SumoConfig (config.json) file")
                         window.config = json.loads(board.get('config.json'))
+                        # Check if it's the latest SumoFirmware
+                        response = urllib.request.urlopen(SUMOFIRMWARE_VERSION_URL)
+                        if str(window.config['firmware_version']).encode() not in response.read():
+                            window.dialog.emit('Update SumoManager',
+                                'Please update your SumoFirmware under File > Update SumoFirmware<br>' +
+                                'Close this dialog first.', '')
                     # Otherwise when no config file present, update the firmware
                     else:
                         print("PortUpdate: Sarting Update Firmware process")
@@ -626,6 +641,14 @@ if __name__ == '__main__':
     # Start update server thread
     update_server = UpdateServer()
     update_server.start()
+
+    # Check for a newer version of this application
+    response = urllib.request.urlopen(SUMOMANAGER_URL)
+    if APP_VERSION.encode() not in response.read():
+        window.dialog.emit('Update SumoManager',
+            'Please download the latest SumoManager application under the following link:<br>' +
+            '<a style="color:white;cursor:pointer;" href="https://www.robokoding.com/kits/' +
+            'sumorobot/sumomanager">https://www.robokoding.com/kits/sumorobot/sumomanager</a>', '')
 
     # Launch application
     sys.exit(app.exec_())
