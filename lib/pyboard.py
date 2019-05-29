@@ -131,7 +131,8 @@ class Pyboard:
             for attempt in range(wait + 1):
                 try:
                     self.serial = serial.Serial(device, baudrate=baudrate, timeout=3, interCharTimeout=1)
-                    # Reset the device
+                    # MODIFY: Reset the device
+                    self.serial.setDTR(False)
                     self.serial.setRTS(False)
                     self._data = None
                     break

@@ -422,7 +422,7 @@ class UpdateFirmware(QThread):
                     tmp_config['sumo_id'] = window.config['sumo_id']
                     tmp_config['status_led_pin'] = window.status_led_pin
                     tmp_config['sumo_server'] = window.config['sumo_server']
-                    tmp_config['ultrasonic_distance'] = window.config['ultrasonic_distance']
+                    tmp_config['ultrasonic_threshold'] = window.config['ultrasonic_threshold']
                     tmp_config['left_line_value'] = window.config['left_line_value']
                     tmp_config['right_line_value'] = window.config['right_line_value']
                     tmp_config['left_line_threshold'] = window.config['left_line_threshold']
