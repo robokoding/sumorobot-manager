@@ -35,8 +35,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
 # App versioning
-APP_VERSION = '0.8.0'
-APP_TIMESTAMP = '2019.05.26 22:20:00'
+APP_VERSION = '0.8.1'
+APP_TIMESTAMP = '2019.06.01 12:20:00'
 
 # App name
 APP_NAME = 'SumoManager v' + APP_VERSION
@@ -418,15 +418,15 @@ class UpdateFirmware(QThread):
                 if window.config:
                     # Transfer the personalized values
                     tmp_config = json.loads(data['config.json'])
-                    tmp_config['wifis'] = window.config['wifis']
-                    tmp_config['sumo_id'] = window.config['sumo_id']
+                    tmp_config['wifis'] = window.config.get('wifis')
+                    tmp_config['sumo_id'] = window.config.get('sumo_id') or 'xxxxxxxx'
                     tmp_config['status_led_pin'] = window.status_led_pin
-                    tmp_config['sumo_server'] = window.config['sumo_server']
-                    tmp_config['ultrasonic_threshold'] = window.config['ultrasonic_threshold']
-                    tmp_config['left_line_value'] = window.config['left_line_value']
-                    tmp_config['right_line_value'] = window.config['right_line_value']
-                    tmp_config['left_line_threshold'] = window.config['left_line_threshold']
-                    tmp_config['right_line_threshold'] = window.config['right_line_threshold']
+                    tmp_config['sumo_server'] = window.config.get('sumo_server') or '165.227.140.64:80'
+                    tmp_config['ultrasonic_threshold'] = window.config.get('ultrasonic_threshold') or 40
+                    tmp_config['left_line_value'] = window.config.get('left_line_value') or 0
+                    tmp_config['right_line_value'] = window.config.get('right_line_value') or 0
+                    tmp_config['left_line_threshold'] = window.config.get('left_line_threshold') or 1000
+                    tmp_config['right_line_threshold'] = window.config.get('right_line_threshold') or 1000
                     data['config.json'] = json.dumps(tmp_config, indent=8)
                 # In case it's the default config file
                 else:
