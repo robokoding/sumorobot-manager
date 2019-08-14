@@ -1,6 +1,6 @@
 # sumorobot-manager
 
-![sumomanager](https://www.robokoding.com/assets/img/sumomanager_connecting.png)
+Update SumoFirmware
 
 ## How to run
 
