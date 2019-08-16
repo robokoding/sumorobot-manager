@@ -1,20 +1,24 @@
 QMainWindow {
-    padding-left: 100px;
+    font-family: Orbitron;
+
 }
 
 QWidget {
     color: white;
     background-color: #242943;
+    font-family: Orbitron;
 }
 
 QLabel::a {
     color: white;
     text-decoration: none;
     border-bottom: dotted 1px;
+    font-family: Orbitron;
 }
 
 QLabel {
     color: white;
+    font-family: Orbitron;
 }
 
 QPushButton {
@@ -22,6 +26,7 @@ QPushButton {
     padding-top: 2px;
     padding-left: 5px;
     padding-right: 5px;
+    font-family: Orbitron;
     border: 2px solid white;
     background: transparent;
 }
@@ -32,4 +37,5 @@ QPushButton:hover {
 }
 
 QStatusBar {
+    font-family: Orbitron;
 }

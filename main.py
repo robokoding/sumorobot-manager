@@ -15,15 +15,13 @@ Contact: letstalk@robokoding.com
 # python imports
 import os
 import sys
-import json
 import time
-import string
-import secrets
 import argparse
 import traceback
 import urllib.request
 import serial.tools.list_ports
 
+sys.path.insert(1, '~/Desktop/robokoding/sumorobot-manager/')
 # Local lib imports
 from lib.esptool import *
 
@@ -127,7 +125,7 @@ class SumoManager(QMainWindow):
             self.setStyleSheet(file.read())
         self.setWindowTitle(APP_NAME)
         self.setCentralWidget(main_widget)
-        self.resize(300, 300)
+        self.setMinimumSize(300, 300)
         self.show()
         self.center()
         # To lose focus on the textedit field
@@ -333,7 +331,8 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     # For high dpi displays
-    app.setAttribute(Qt.AA_UseHighDpiPixmaps)
+    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+    #app.setAttribute(Qt.AA_UseHighDpiPixmaps)
     app.setAttribute(Qt.AA_EnableHighDpiScaling)
 
     # Create the app main window
