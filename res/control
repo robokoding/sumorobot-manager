@@ -1,0 +1,8 @@
+Package: SumoManager
+Version: 0.9.0
+Architecture: all
+Maintainer: Silver Kuusik <silver@robokoding.com>
+Depends: python3.7
+Installed-Size: 40000
+Homepage: http://www.robokoding.com/
+Description: Update SumoFirmware

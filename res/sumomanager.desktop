@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=SumoManager
+GenericName=SumoManager
+Comment=SumoFirmware update manager
+Exec=/usr/bin/sumomanager
+Icon=sumologo
+Terminal=false
+Categories=Development;IDE;Electronics;
+Keywords=robotics;electronics;microcontroller;
