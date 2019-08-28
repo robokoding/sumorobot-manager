@@ -4,22 +4,13 @@ Update SumoFirmware
 
 ## How to run
 
-1. Install Python3, PyQt5, pyserial
-2. From terminal: python3 main.py
+1. Install Python3, PyQt5, pyserial (terminal: pip3 install pyqt5 pyserial)
+2. Launch the app (terminal: python3 main.py)
 
 ## How to use
 
-* To add WiFi network
-1. Plug in SumoRobot via USB
-2. Wait for WiFi networks to load
-3. Select desired WiFi network
-3. Add network password
-4. Press add WiFi network
-
-* To update firmware
-1. Plug in SumoRobot via USB
-2. Wait for WiFi networks to load
-3. From program menu go File > Update Firmware
+1. Plug in SumoRobot via a micro USB cable
+2. Press Update Firmware
 
 ## Support
 If you find our work useful, please consider donating : )  
@@ -33,3 +24,4 @@ If you find our work useful, please consider donating : )
 
 * Qt
 * Python
+* pyinstaller
