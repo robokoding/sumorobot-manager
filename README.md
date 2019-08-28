@@ -7,6 +7,12 @@ Update SumoFirmware
 1. Install Python3, PyQt5, pyserial (terminal: pip3 install pyqt5 pyserial)
 2. Launch the app (terminal: python3 main.py)
 
+## How to build executable
+
+* Linux (terminal: make linux)
+* Windows needs http://gnuwin32.sourceforge.net/packages/make.htm (terminal: make windows)
+* Mac OS (terminal: make macos)
+
 ## How to use
 
 1. Plug in SumoRobot via a micro USB cable
