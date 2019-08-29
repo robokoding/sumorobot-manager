@@ -2,9 +2,9 @@
 Type=Application
 Name=SumoManager
 GenericName=SumoManager
-Comment=SumoFirmware update manager
+Comment=Update the SumoFirmware of the RoboKoding's SumoRobot
 Exec=/usr/bin/sumomanager
 Icon=sumologo
 Terminal=false
-Categories=Development;IDE;Electronics;
+Categories=Development;Electronics;
 Keywords=robotics;electronics;microcontroller;

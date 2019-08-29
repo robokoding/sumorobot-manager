@@ -50,6 +50,12 @@ RESOURCE_PATH = 'res'
 if hasattr(sys, '_MEIPASS'):
     RESOURCE_PATH = os.path.join(sys._MEIPASS, RESOURCE_PATH)
 
+if hasattr(Qt, 'AA_EnableHighDpiScaling'):
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+
+if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
 # Resource URLs
 SUMO_IMG = os.path.join(RESOURCE_PATH, 'sumologo.svg')
 USB_CON_IMG = os.path.join(RESOURCE_PATH, 'usb_con.png')
@@ -125,7 +131,7 @@ class SumoManager(QMainWindow):
             self.setStyleSheet(file.read())
         self.setWindowTitle(APP_NAME)
         self.setCentralWidget(main_widget)
-        self.setMinimumSize(300, 300)
+        self.setMinimumSize(400, 300)
         self.show()
         self.center()
         # To lose focus on the textedit field
@@ -329,11 +335,6 @@ class PortUpdate(QThread):
 if __name__ == '__main__':
     # Initiate application
     app = QApplication(sys.argv)
-
-    # For high dpi displays
-    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
-    #app.setAttribute(Qt.AA_UseHighDpiPixmaps)
-    app.setAttribute(Qt.AA_EnableHighDpiScaling)
 
     # Create the app main window
     window = SumoManager()
