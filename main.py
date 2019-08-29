@@ -9,7 +9,7 @@ RoboKoding SumoRobots.
 
 Author: RoboKoding LTD
 Website: https://www.robokoding.com
-Contact: letstalk@robokoding.com
+Contact: silver@robokoding.com
 """
 
 # python imports
@@ -21,14 +21,8 @@ import traceback
 import urllib.request
 import serial.tools.list_ports
 
-sys.path.insert(1, '~/Desktop/robokoding/sumorobot-manager/')
 # Local lib imports
 from lib.esptool import *
-
-# pyqt imports
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
 
 # App versioning
 APP_VERSION = '0.9.0'
@@ -41,7 +35,7 @@ APP_NAME = 'SumoManager v' + APP_VERSION
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
-# Firmware URLs, file names
+# SumoFirmware and SumoManager repository URLs
 SUMOMANAGER_URL = 'https://github.com/robokoding/sumorobot-manager/releases/latest/'
 SUMOFIRMWARE_URL = 'https://github.com/robokoding/sumorobot-firmware/releases/latest/download/'
 
@@ -49,6 +43,12 @@ SUMOFIRMWARE_URL = 'https://github.com/robokoding/sumorobot-firmware/releases/la
 RESOURCE_PATH = 'res'
 if hasattr(sys, '_MEIPASS'):
     RESOURCE_PATH = os.path.join(sys._MEIPASS, RESOURCE_PATH)
+    os.environ['PATH'] = sys._MEIPASS + '\;' + os.environ.get('PATH', '')
+
+# pyqt imports
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 
 if hasattr(Qt, 'AA_EnableHighDpiScaling'):
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
@@ -131,7 +131,7 @@ class SumoManager(QMainWindow):
             self.setStyleSheet(file.read())
         self.setWindowTitle(APP_NAME)
         self.setCentralWidget(main_widget)
-        self.setMinimumSize(400, 300)
+        self.setMinimumSize(400, 310)
         self.show()
         self.center()
         # To lose focus on the textedit field

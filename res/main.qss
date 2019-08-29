@@ -1,32 +1,19 @@
-QMainWindow {
-    font-family: Orbitron;
-
-}
-
 QWidget {
     color: white;
-    background-color: #242943;
+    font-size: 15px;
+    font-weight: bold;
     font-family: Orbitron;
+    background-color: #242943;
 }
 
 QLabel::a {
-    color: white;
     text-decoration: none;
     border-bottom: dotted 1px;
-    font-family: Orbitron;
-}
-
-QLabel {
-    color: white;
-    font-family: Orbitron;
 }
 
 QPushButton {
     height: 2em;
     padding-top: 2px;
-    padding-left: 5px;
-    padding-right: 5px;
-    font-family: Orbitron;
     border: 2px solid white;
     background: transparent;
 }
@@ -34,8 +21,4 @@ QPushButton {
 QPushButton:hover {
     color: #ffd500;
     border: 2px solid #ffd500;
-}
-
-QStatusBar {
-    font-family: Orbitron;
 }
