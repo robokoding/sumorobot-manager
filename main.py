@@ -4,7 +4,7 @@
 """
 SumoManager
 
-Manage different functions on the
+Manage SumoFirmware updates for the
 RoboKoding SumoRobots.
 
 Author: RoboKoding LTD
@@ -21,8 +21,17 @@ import traceback
 import urllib.request
 import serial.tools.list_ports
 
+# pyqt imports
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
+
 # Local lib imports
 from lib.esptool import *
+
+# Ignore SSL
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 # App versioning
 APP_VERSION = '0.9.0'
@@ -30,10 +39,6 @@ APP_TIMESTAMP = '2019.08.14 14:20'
 
 # App name
 APP_NAME = 'SumoManager v' + APP_VERSION
-
-# Ignore SSL
-import ssl
-ssl._create_default_https_context = ssl._create_unverified_context
 
 # SumoFirmware and SumoManager repository URLs
 SUMOMANAGER_URL = 'https://github.com/robokoding/sumorobot-manager/releases/latest/'
@@ -45,24 +50,19 @@ if hasattr(sys, '_MEIPASS'):
     RESOURCE_PATH = os.path.join(sys._MEIPASS, RESOURCE_PATH)
     os.environ['PATH'] = sys._MEIPASS + '\;' + os.environ.get('PATH', '')
 
-# pyqt imports
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-
-if hasattr(Qt, 'AA_EnableHighDpiScaling'):
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-
-if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-
-# Resource URLs
+# Resource PATHs
 SUMO_IMG = os.path.join(RESOURCE_PATH, 'sumologo.svg')
 USB_CON_IMG = os.path.join(RESOURCE_PATH, 'usb_con.png')
 USB_DCON_IMG = os.path.join(RESOURCE_PATH, 'usb_dcon.png')
 ORBITRON_FONT = os.path.join(RESOURCE_PATH, 'orbitron.ttf')
 BOOT_APP0_BIN = os.path.join(RESOURCE_PATH, 'boot_app0.bin')
 BOOTLOADER_DIO_40M_BIN = os.path.join(RESOURCE_PATH, 'bootloader_dio_40m.bin')
+
+if hasattr(Qt, 'AA_EnableHighDpiScaling'):
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+
+if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
 class SumoManager(QMainWindow):
     usb_dcon = pyqtSignal()
@@ -80,6 +80,7 @@ class SumoManager(QMainWindow):
     def initUI(self):
         # Load the Orbitron font
         QFontDatabase.addApplicationFont(ORBITRON_FONT)
+        print("path", ORBITRON_FONT)
 
         # SumoRobot Logo
         logo_label = QLabel()
@@ -88,13 +89,11 @@ class SumoManager(QMainWindow):
 
         # Serial port connection indication
         serial_label = QLabel('1. Connect SumoRobot via USB')
-        serial_label.setStyleSheet('margin-top: 20px;')
         self.serial_image = QLabel()
         self.serial_image.setPixmap(QPixmap(USB_DCON_IMG))
 
         # SumoFirmware update label
         update_label = QLabel('2. Update SumoFirmware')
-        update_label.setStyleSheet('margin-top: 20px;')
 
         # SumoFirmware update button
         self.update_btn = QPushButton('Update SumoFirmware', self)
@@ -180,14 +179,14 @@ class SumoManager(QMainWindow):
         msg_box.setStandardButtons(QMessageBox.Close)
         msg_box.setText(title)
         msg_box.setInformativeText('<font face=Arial>' + message + '</font>')
-        horizontalSpacer = QSpacerItem(550, 0, QSizePolicy.Minimum, QSizePolicy.Expanding);
-        layout = msg_box.layout();
-        layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount());
+        horizontalSpacer = QSpacerItem(550, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        layout = msg_box.layout()
+        layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount())
         msg_box.exec_()
 
     # Button clicked event
     def button_clicked(self):
-        # When some thread is already processing SumoRobot is not connected
+        # When some thread is already processing
         if self.processing or not self.connected_port:
             return
 
