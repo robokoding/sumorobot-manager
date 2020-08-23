@@ -2152,6 +2152,8 @@ def write_flash(esp, args):
         t = time.time()
         while len(image) > 0:
             print('\rWriting at 0x%08x... (%d %%)' % (address + seq * esp.FLASH_WRITE_SIZE, 100 * (seq + 1) // blocks), end='')
+            if args.callback:
+                args.callback(100 * (seq + 1) // blocks)
             sys.stdout.flush()
             block = image[0:esp.FLASH_WRITE_SIZE]
             if args.compress:

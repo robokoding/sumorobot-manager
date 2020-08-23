@@ -34,7 +34,7 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # App versioning
-APP_VERSION = '0.9.0'
+APP_VERSION = '1.0.0'
 APP_TIMESTAMP = '2019.08.14 14:20'
 
 # App name
@@ -55,8 +55,6 @@ SUMO_IMG = os.path.join(RESOURCE_PATH, 'sumologo.svg')
 USB_CON_IMG = os.path.join(RESOURCE_PATH, 'usb_con.png')
 USB_DCON_IMG = os.path.join(RESOURCE_PATH, 'usb_dcon.png')
 ORBITRON_FONT = os.path.join(RESOURCE_PATH, 'orbitron.ttf')
-BOOT_APP0_BIN = os.path.join(RESOURCE_PATH, 'boot_app0.bin')
-BOOTLOADER_DIO_40M_BIN = os.path.join(RESOURCE_PATH, 'bootloader_dio_40m.bin')
 
 if hasattr(Qt, 'AA_EnableHighDpiScaling'):
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
@@ -178,7 +176,7 @@ class SumoManager(QMainWindow):
         msg_box.setTextFormat(Qt.RichText)
         msg_box.setStandardButtons(QMessageBox.Close)
         msg_box.setText(title)
-        msg_box.setInformativeText('<font face=Arial>' + message + '</font>')
+        msg_box.setInformativeText(f'<font face=Arial>{message}</font>')
         horizontalSpacer = QSpacerItem(550, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
         layout = msg_box.layout()
         layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount())
@@ -187,7 +185,13 @@ class SumoManager(QMainWindow):
     # Button clicked event
     def button_clicked(self):
         # When some thread is already processing
-        if self.processing or not self.connected_port:
+        if self.processing:
+            return
+
+        #SumoRobot is not connected
+        if not self.connected_port:
+            self.show_dialog('Updating SumoFirmware',
+                'Please connect your SumoRobot via USB cable first.', '')
             return
 
         # Indicates a background thread process
@@ -195,10 +199,10 @@ class SumoManager(QMainWindow):
 
     def app_info(self, event):
         # Show app info dialog
-        self.show_dialog('App info', 'Version: ' + APP_VERSION + '<br>' +
-            'Timestamp: ' + APP_TIMESTAMP + '<br><br>' +
-            'This is the SumoManager app. You can update the SumoFirmware of your ' +
-            'SumoRobot with it. Please keep this app up to the date for the best possible experience.<br>', '')
+        self.show_dialog('App info', f'Version: {APP_VERSION}<br>'
+            + f'Timestamp: {APP_TIMESTAMP}<br><br>'
+            + 'This is the SumoManager app. You can update the SumoFirmware of your '
+            + 'SumoRobot with it. Please keep this app up to the date for the best possible experience.<br>', '')
 
     def update_firmware(self, event):
         # When SumoRobot is connected and update firmware is not running
@@ -216,21 +220,14 @@ class UpdateFirmware(QThread):
 
             window.message.emit('warning', 'Downloading SumoFirmware ...')
             try:
-                # Open the firmware and parition binary URLs
+                # Open the SumoFirmware binary URL
                 firmware_response = urllib.request.urlopen(SUMOFIRMWARE_URL + 'sumofirmware.bin')
-                partitions_response = urllib.request.urlopen(SUMOFIRMWARE_URL + 'partitions.bin')
 
-                # Write the firmware binary into a file
+                # Write the SumoFirmware binary into a file
                 firmware_file = QTemporaryFile()
                 firmware_file.open()
                 firmware_file.writeData(firmware_response.read())
                 firmware_file.flush()
-
-                # Write the parition binary into a file
-                partitions_file = QTemporaryFile()
-                partitions_file.open()
-                partitions_file.writeData(partitions_response.read())
-                partitions_file.flush()
 
                 # Detect the ESP version
                 esp = ESPLoader.detect_chip(window.connected_port)
@@ -238,16 +235,19 @@ class UpdateFirmware(QThread):
                 # Prepare for flashing
                 esp.run_stub()
                 esp.IS_STUB = True
-                esp.change_baud(460800)
+                esp.change_baud(115200)
                 esp.STATUS_BYTES_LENGTH = 2
                 esp.flash_set_parameters(flash_size_bytes('4MB'))
                 esp.FLASH_WRITE_SIZE = 0x4000
                 esp.ESP_FLASH_DEFL_BEGIN = 0x10
 
-                # Flash the latest MicroPython
-                window.message.emit('warning', 'Flashing SumoFirmware ...')
+                # Callback to show flashing progress in percentage
+                def show_progress(percentage):
+                    window.message.emit('warning', f'Flashing SumoFirmware ... {percentage}%')
+
+                # Flash the SumoFirmware image
                 write_flash(esp, argparse.Namespace(
-                    addr_filename=[(0x1000, open(BOOTLOADER_DIO_40M_BIN, 'rb'))],
+                    addr_filename=[(0x1000, open(firmware_file.fileName(), 'rb'))],
                     verify=False,
                     compress=None,
                     no_stub=False,
@@ -255,37 +255,8 @@ class UpdateFirmware(QThread):
                     flash_mode='dio',
                     flash_size='4MB',
                     flash_freq='keep',
-                    no_compress=False))
-                write_flash(esp, argparse.Namespace(
-                    addr_filename=[(0x8000, open(partitions_file.fileName(), 'rb'))],
-                    verify=False,
-                    compress=None,
-                    no_stub=False,
-                    erase_all=False,
-                    flash_mode='dio',
-                    flash_size='4MB',
-                    flash_freq='keep',
-                    no_compress=False))
-                write_flash(esp, argparse.Namespace(
-                    addr_filename=[(0xe000, open(BOOT_APP0_BIN, 'rb'))],
-                    verify=False,
-                    compress=None,
-                    no_stub=False,
-                    erase_all=False,
-                    flash_mode='dio',
-                    flash_size='4MB',
-                    flash_freq='keep',
-                    no_compress=False))
-                write_flash(esp, argparse.Namespace(
-                    addr_filename=[(0x10000, open(firmware_file.fileName(), 'rb'))],
-                    verify=False,
-                    compress=None,
-                    no_stub=False,
-                    erase_all=False,
-                    flash_mode='dio',
-                    flash_size='4MB',
-                    flash_freq='keep',
-                    no_compress=False))
+                    no_compress=False,
+                    callback=show_progress))
                 esp.hard_reset()
                 esp._port.close()
 
@@ -293,9 +264,9 @@ class UpdateFirmware(QThread):
                 window.message.emit('info', 'Successfully updated SumoFirmware')
             except:
                 window.dialog.emit('Error updating SumoFirmware',
-                    '* Check your Internet connection<br>' +
-                    '* Try reconnecting the SumoRobot USB cable<br>' +
-                    '* Finally try Update SumoFirmware again',
+                    '* Check your Internet connection<br>'
+                    + '* Try reconnecting the SumoRobot USB cable<br>'
+                    + '* Finally try Update SumoFirmware again',
                     traceback.format_exc())
                 window.message.emit('error', 'Error updating SumoFirmware')
 
@@ -355,9 +326,9 @@ if __name__ == '__main__':
     response = urllib.request.urlopen(SUMOMANAGER_URL)
     if APP_VERSION.encode() not in response.read():
         window.dialog.emit('Update SumoManager',
-            'Please download the latest SumoManager application under the following link:<br>' +
-            '<a style="color:white;cursor:pointer;" href="https://www.robokoding.com/kits/' +
-            'sumorobot/sumomanager">https://www.robokoding.com/kits/sumorobot/sumomanager</a>', '')
+            'Please download the latest SumoManager application under the following link:<br>'
+            + '<a style="color:white;cursor:pointer;" href="https://www.robokoding.com/kits/'
+            + 'sumorobot/sumomanager">https://www.robokoding.com/kits/sumorobot/sumomanager</a>', '')
 
     # Launch application
     sys.exit(app.exec_())
