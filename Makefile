@@ -1,4 +1,7 @@
 UNAME := $(shell uname)
+USERNAME := $(shell whoami)
+PYTHON_VERSION := $(shell which python | grep -Eo '[0-9]{1,4}')
+QT_LIB_DIR := C:/Users/$(USERNAME)/AppData/Local/Programs/Python/Python$(PYTHON_VERSION)/Lib/site-packages/PyQt5/Qt/bin
 
 # clean is different for each distro
 ifeq ($(OS),Windows_NT)
@@ -27,7 +30,7 @@ linux: clean
 	dpkg -b dist/SumoManager
 
 windows: clean
-	pyinstaller main.py --onefile --name SumoManager --windowed --icon res\sumologo.ico --add-data res;res --add-data "%USERPROFILE%\AppData\Local\Programs\Python\Python37-32\Lib\site-packages\PyQt5\Qt\bin\Qt5Core.dll";. --add-data "%USERPROFILE%\AppData\Local\Programs\Python\Python37-32\Lib\site-packages\PyQt5\Qt\bin\Qt5Gui.dll";. --add-data "%USERPROFILE%\AppData\Local\Programs\Python\Python37-32\Lib\site-packages\PyQt5\Qt\bin\Qt5Widgets.dll";.
+	pyinstaller main.py --onefile --name SumoManager --windowed --icon "res/sumologo.ico" --add-data "res;res" --add-data "$(QT_LIB_DIR)/Qt5Core.dll;." --add-data "$(QT_LIB_DIR)/Qt5Gui.dll;." --add-data "$(QT_LIB_DIR)/Qt5Widgets.dll;."
 
 macos: clean
 	pyinstaller main.py --name SumoManager --windowed --icon res/sumologo.icns --add-data res:res
