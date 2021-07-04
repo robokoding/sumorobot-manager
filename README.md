@@ -9,6 +9,8 @@ Update SumoFirmware
 
 ## How to build executable
 
+1. Install pyinstaller (terminal: pip3 install pyinstaller)
+2. On Mac OS install create-dmg (terminal: npm install create-dmg) 
 * Linux (terminal: make linux)
 * Windows needs http://gnuwin32.sourceforge.net/packages/make.htm (terminal: make windows)
 * Mac OS (terminal: make macos)
